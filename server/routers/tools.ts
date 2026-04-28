@@ -7,6 +7,11 @@ import { createOutput, createUpload } from "../db";
 import { publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
+// Helper function to check if result is an error
+function isTranscriptionError(result: any): result is { error: string; code: string; details?: string } {
+  return result && typeof result === "object" && "error" in result && "code" in result;
+}
+
 // ── Presentation Tool ──────────────────────────────────────────────────────
 
 export const presentationRouter = router({
@@ -18,11 +23,12 @@ export const presentationRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const response = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `Sen bir sunum tasarım uzmanısın. Kullanıcının verdiği metni profesyonel bir sunum yapısına dönüştür.
+      try {
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `Sen bir sunum tasarım uzmanısın. Kullanıcının verdiği metni profesyonel bir sunum yapısına dönüştür.
 Çıktıyı şu JSON formatında ver:
 {
   "title": "Sunum başlığı",
@@ -36,56 +42,64 @@ export const presentationRouter = router({
   ],
   "summary": "Kısa özet"
 }`,
-          },
-          {
-            role: "user",
-            content: `Şu metni profesyonel bir sunuma dönüştür:\n\n${input.text}`,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "presentation_output",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                slides: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      slideNumber: { type: "integer" },
-                      heading: { type: "string" },
-                      bullets: { type: "array", items: { type: "string" } },
-                      notes: { type: "string" },
+            },
+            {
+              role: "user",
+              content: `Şu metni profesyonel bir sunuma dönüştür:\n\n${input.text}`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "presentation_output",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  slides: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        slideNumber: { type: "integer" },
+                        heading: { type: "string" },
+                        bullets: { type: "array", items: { type: "string" } },
+                        notes: { type: "string" },
+                      },
+                      required: ["slideNumber", "heading", "bullets", "notes"],
+                      additionalProperties: false,
                     },
-                    required: ["slideNumber", "heading", "bullets", "notes"],
-                    additionalProperties: false,
                   },
+                  summary: { type: "string" },
                 },
-                summary: { type: "string" },
+                required: ["title", "slides", "summary"],
+                additionalProperties: false,
               },
-              required: ["title", "slides", "summary"],
-              additionalProperties: false,
             },
           },
-        },
-      });
+        });
 
-      const content = response.choices[0]?.message?.content;
-      const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        const content = response.choices[0]?.message?.content;
+        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
 
-      if (ctx.user) {
-        await createOutput({
-          userId: ctx.user.id,
-          toolType: "presentation",
-          metadata: JSON.stringify(parsed),
+        if (ctx.user) {
+          await createOutput({
+            userId: ctx.user.id,
+            toolType: "presentation",
+            metadata: JSON.stringify(parsed),
+          });
+        }
+
+        return parsed;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Presentation improvement failed",
+          cause: error,
         });
       }
-
-      return parsed;
     }),
 
   generateImage: publicProcedure
@@ -147,67 +161,76 @@ export const voiceRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const rawResult = await transcribeAudio({
-        audioUrl: input.audioUrl,
-        language: input.language ?? "tr",
-        prompt: "Transcribe this audio accurately",
-      });
+      try {
+        const rawResult = await transcribeAudio({
+          audioUrl: input.audioUrl,
+          language: input.language ?? "tr",
+          prompt: "Transcribe this audio accurately",
+        });
 
-      if ("error" in rawResult) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: rawResult.error });
-      }
-      const result = rawResult;
+        if (isTranscriptionError(rawResult)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: rawResult.error, cause: rawResult });
+        }
+        const result = rawResult;
 
-      const analysisResponse = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `Ses transkripsiyon analisti olarak şu metni analiz et ve JSON formatında döndür:\n{\n  "summary": "Kısa özet",\n  "keyPoints": ["Anahtar nokta 1", "Anahtar nokta 2"],\n  "tone": "Ses tonu (resmi/gayri resmi/akademik vb.)",\n  "wordCount": 0,\n  "language": "Dil"\n}`,
-          },
-          {
-            role: "user",
-            content: `Şu transkripsiyonu analiz et:\n\n${result.text}`,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "voice_analysis",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                summary: { type: "string" },
-                keyPoints: { type: "array", items: { type: "string" } },
-                tone: { type: "string" },
-                wordCount: { type: "integer" },
-                language: { type: "string" },
+        const analysisResponse = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `Ses transkripsiyon analisti olarak şu metni analiz et ve JSON formatında döndür:\n{\n  "summary": "Kısa özet",\n  "keyPoints": ["Anahtar nokta 1", "Anahtar nokta 2"],\n  "tone": "Ses tonu (resmi/gayri resmi/akademik vb.)",\n  "wordCount": 0,\n  "language": "Dil"\n}`,
+            },
+            {
+              role: "user",
+              content: `Şu transkripsiyonu analiz et:\n\n${result.text}`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "voice_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  summary: { type: "string" },
+                  keyPoints: { type: "array", items: { type: "string" } },
+                  tone: { type: "string" },
+                  wordCount: { type: "integer" },
+                  language: { type: "string" },
+                },
+                required: ["summary", "keyPoints", "tone", "wordCount", "language"],
+                additionalProperties: false,
               },
-              required: ["summary", "keyPoints", "tone", "wordCount", "language"],
-              additionalProperties: false,
             },
           },
-        },
-      });
+        });
 
-      const analysisContent = analysisResponse.choices[0]?.message?.content;
-      const analysis = JSON.parse(
-        typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent)
-      );
+        const analysisContent = analysisResponse.choices[0]?.message?.content;
+        const analysis = JSON.parse(
+          typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent)
+        );
 
-      if (ctx.user) {
-        await createOutput({
-          userId: ctx.user.id,
-          toolType: "voice",
-          metadata: JSON.stringify({ transcription: result.text, analysis }),
+        if (ctx.user) {
+          await createOutput({
+            userId: ctx.user.id,
+            toolType: "voice",
+            metadata: JSON.stringify({ transcription: result.text, analysis }),
+          });
+        }
+
+        return {
+          transcription: result.text,
+          segments: result.segments ?? [],
+          analysis,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Voice transcription failed",
+          cause: error,
         });
       }
-
-      return {
-        transcription: result.text,
-        segments: result.segments ?? [],
-        analysis,
-      };
     }),
 
   analyzeOptions: publicProcedure
@@ -240,78 +263,87 @@ export const videoRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Transcribe audio from video
-      const rawTranscription = await transcribeAudio({
-        audioUrl: input.videoUrl,
-        language: "tr",
-        prompt: "Transcribe video content",
-      });
+      try {
+        // Transcribe audio from video
+        const rawTranscription = await transcribeAudio({
+          audioUrl: input.videoUrl,
+          language: "tr",
+          prompt: "Transcribe video content",
+        });
 
-      if ("error" in rawTranscription) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: rawTranscription.error });
-      }
-      const transcription = rawTranscription;
+        if (isTranscriptionError(rawTranscription)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: rawTranscription.error, cause: rawTranscription });
+        }
+        const transcription = rawTranscription;
 
-      const analysisResponse = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `Video içerik analisti olarak şu transkripsiyonu analiz et ve JSON formatında döndür:\n{\n  "summary": "Video özeti",\n  "topics": ["Konu 1", "Konu 2"],\n  "suggestedEnhancements": ["Parlaklık artırma önerilir", "Stabilizasyon gerekli"],\n  "subtitleLines": [{"time": "00:00:01", "text": "Altyazı metni"}],\n  "contentType": "İçerik türü (eğitim/sunum/vlog vb.)"\n}`,
-          },
-          {
-            role: "user",
-            content: `Video transkripsiyonu:\n\n${transcription.text}`,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "video_analysis",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                summary: { type: "string" },
-                topics: { type: "array", items: { type: "string" } },
-                suggestedEnhancements: { type: "array", items: { type: "string" } },
-                subtitleLines: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      time: { type: "string" },
-                      text: { type: "string" },
+        const analysisResponse = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `Video içerik analisti olarak şu transkripsiyonu analiz et ve JSON formatında döndür:\n{\n  "summary": "Video özeti",\n  "topics": ["Konu 1", "Konu 2"],\n  "suggestedEnhancements": ["Parlaklık artırma önerilir", "Stabilizasyon gerekli"],\n  "subtitleLines": [{"time": "00:00:01", "text": "Altyazı metni"}],\n  "contentType": "İçerik türü (eğitim/sunum/vlog vb.)"\n}`,
+            },
+            {
+              role: "user",
+              content: `Video transkripsiyonu:\n\n${transcription.text}`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "video_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  summary: { type: "string" },
+                  topics: { type: "array", items: { type: "string" } },
+                  suggestedEnhancements: { type: "array", items: { type: "string" } },
+                  subtitleLines: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        time: { type: "string" },
+                        text: { type: "string" },
+                      },
+                      required: ["time", "text"],
+                      additionalProperties: false,
                     },
-                    required: ["time", "text"],
-                    additionalProperties: false,
                   },
+                  contentType: { type: "string" },
                 },
-                contentType: { type: "string" },
+                required: ["summary", "topics", "suggestedEnhancements", "subtitleLines", "contentType"],
+                additionalProperties: false,
               },
-              required: ["summary", "topics", "suggestedEnhancements", "subtitleLines", "contentType"],
-              additionalProperties: false,
             },
           },
-        },
-      });
+        });
 
-      const analysisContent = analysisResponse.choices[0]?.message?.content;
-      const analysis = JSON.parse(
-        typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent)
-      );
+        const analysisContent = analysisResponse.choices[0]?.message?.content;
+        const analysis = JSON.parse(
+          typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent)
+        );
 
-      if (ctx.user) {
-        await createOutput({
-          userId: ctx.user.id,
-          toolType: "video",
-          metadata: JSON.stringify({ transcription: transcription.text, analysis }),
+        if (ctx.user) {
+          await createOutput({
+            userId: ctx.user.id,
+            toolType: "video",
+            metadata: JSON.stringify({ transcription: transcription.text, analysis }),
+          });
+        }
+
+        return {
+          transcription: transcription.text,
+          analysis,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Video analysis failed",
+          cause: error,
         });
       }
-
-      return {
-        transcription: transcription.text,
-        analysis,
-      };
     }),
 });
 
@@ -328,17 +360,18 @@ export const codingRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const modeInstructions = {
-        generate: `${input.language.toUpperCase()} kodu üret. Sadece kod ver, açıklama sonraya bırak.`,
-        explain: `Verilen ${input.language.toUpperCase()} kodunu sade Türkçe ile açıkla.`,
-        fix: `Verilen ${input.language.toUpperCase()} kodundaki hataları bul ve düzelt. Düzeltilmiş kodu ver.`,
-      };
+      try {
+        const modeInstructions = {
+          generate: `${input.language.toUpperCase()} kodu üret. Sadece kod ver, açıklama sonraya bırak.`,
+          explain: `Verilen ${input.language.toUpperCase()} kodunu sade Türkçe ile açıkla.`,
+          fix: `Verilen ${input.language.toUpperCase()} kodundaki hataları bul ve düzelt. Düzeltilmiş kodu ver.`,
+        };
 
-      const response = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `Sen deneyimli bir yazılım geliştiricisin. ${modeInstructions[input.mode]}
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `Sen deneyimli bir yazılım geliştiricisin. ${modeInstructions[input.mode]}
 Yanıtını şu JSON formatında ver:
 {
   "code": "Üretilen/düzeltilen kod",
@@ -346,47 +379,55 @@ Yanıtını şu JSON formatında ver:
   "improvements": ["İyileştirme önerisi 1", "İyileştirme önerisi 2"],
   "errors": ["Tespit edilen hata 1"]
 }`,
-          },
-          {
-            role: "user",
-            content:
-              input.mode === "generate"
-                ? `${input.language.toUpperCase()} ile şunu yap: ${input.prompt}`
-                : `${input.existingCode ? `Kod:\n\`\`\`${input.language}\n${input.existingCode}\n\`\`\`\n\n` : ""}${input.prompt}`,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "coding_output",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                code: { type: "string" },
-                explanation: { type: "string" },
-                improvements: { type: "array", items: { type: "string" } },
-                errors: { type: "array", items: { type: "string" } },
+            },
+            {
+              role: "user",
+              content:
+                input.mode === "generate"
+                  ? `${input.language.toUpperCase()} ile şunu yap: ${input.prompt}`
+                  : `${input.existingCode ? `Kod:\n\`\`\`${input.language}\n${input.existingCode}\n\`\`\`\n\n` : ""}${input.prompt}`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "coding_output",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  code: { type: "string" },
+                  explanation: { type: "string" },
+                  improvements: { type: "array", items: { type: "string" } },
+                  errors: { type: "array", items: { type: "string" } },
+                },
+                required: ["code", "explanation", "improvements", "errors"],
+                additionalProperties: false,
               },
-              required: ["code", "explanation", "improvements", "errors"],
-              additionalProperties: false,
             },
           },
-        },
-      });
+        });
 
-      const content = response.choices[0]?.message?.content;
-      const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        const content = response.choices[0]?.message?.content;
+        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
 
-      if (ctx.user) {
-        await createOutput({
-          userId: ctx.user.id,
-          toolType: "coding",
-          metadata: JSON.stringify({ language: input.language, mode: input.mode, prompt: input.prompt }),
+        if (ctx.user) {
+          await createOutput({
+            userId: ctx.user.id,
+            toolType: "coding",
+            metadata: JSON.stringify({ language: input.language, mode: input.mode, prompt: input.prompt }),
+          });
+        }
+
+        return parsed;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Code generation failed",
+          cause: error,
         });
       }
-
-      return parsed;
     }),
 });
 
