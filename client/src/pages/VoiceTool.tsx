@@ -398,7 +398,7 @@ export default function VoiceTool() {
                   className="w-full h-auto"
                   poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23333' width='400' height='300'/%3E%3C/svg%3E"
                 >
-                  <source src="/manus-storage/ÖzgürVideo_b5c57528.mp4" type="video/mp4" />
+                  <source src="/manus-storage/ÖzgürVideo_c7d251e6.mp4" type="video/mp4" />
                   Tarayıcınız video oynatmayı desteklemiyor.
                 </video>
               </div>
