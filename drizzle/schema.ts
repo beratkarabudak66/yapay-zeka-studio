@@ -1,17 +1,7 @@
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +15,32 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// Kullanıcı yüklemeleri
+export const uploads = mysqlTable("uploads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  fileUrl: varchar("fileUrl", { length: 1024 }).notNull(),
+  fileType: varchar("fileType", { length: 64 }).notNull(),
+  toolType: mysqlEnum("toolType", ["presentation", "logo", "voice", "video", "coding"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Upload = typeof uploads.$inferSelect;
+export type InsertUpload = typeof uploads.$inferInsert;
+
+// AI çıktıları
+export const outputs = mysqlTable("outputs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  uploadId: int("uploadId"),
+  outputKey: varchar("outputKey", { length: 512 }),
+  outputUrl: varchar("outputUrl", { length: 1024 }),
+  toolType: mysqlEnum("toolType", ["presentation", "logo", "voice", "video", "coding"]).notNull(),
+  metadata: text("metadata"), // JSON string
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Output = typeof outputs.$inferSelect;
+export type InsertOutput = typeof outputs.$inferInsert;
