@@ -156,7 +156,7 @@ export const voiceRouter = router({
   transcribe: publicProcedure
     .input(
       z.object({
-        audioUrl: z.string().url(),
+        audioUrl: z.string().min(1),
         language: z.string().optional(),
       })
     )
@@ -258,7 +258,7 @@ export const videoRouter = router({
   analyze: publicProcedure
     .input(
       z.object({
-        videoUrl: z.string().url(),
+        videoUrl: z.string().min(1),
         fileName: z.string().optional(),
       })
     )
