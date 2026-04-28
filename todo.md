@@ -61,9 +61,7 @@
 - [x] Diğer örnek dosyaları ekle (kullanıcı tarafından sağlanacak)
 
 ## Ses Değiştirici Örnek Video
-- [x] Ses Değiştirici sayfasına ÖzgürVideo.mp4 örnek video ekle
-- [x] Video direkt oynatma (indirme yok) - HTML5 video player ile
-- [x] Video S3'e yükle ve URL'yi sayfada kullan
+- [x] Video bölümü kaldırıldı (oynatma sorunları nedeniyle)
 
 ## Test
 - [x] presentation router testi
