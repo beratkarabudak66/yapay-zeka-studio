@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import type { ChangeEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,7 +59,7 @@ export default function PresentationTool() {
     onError: (err) => toast.error("Görsel oluşturulamadı: " + err.message),
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
@@ -156,7 +157,7 @@ export default function PresentationTool() {
                     type="file"
                     accept=".txt,.pdf"
                     className="hidden"
-                    onChange={handleFileUpload}
+                    onChange={handleFileSelect}
                   />
                 </div>
 
