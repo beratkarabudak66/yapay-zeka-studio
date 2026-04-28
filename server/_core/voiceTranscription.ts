@@ -94,7 +94,16 @@ export async function transcribeAudio(
     let audioBuffer: Buffer;
     let mimeType: string;
     try {
-      const response = await fetch(options.audioUrl);
+      // Convert relative /manus-storage/ URLs to absolute URLs
+      let audioUrl = options.audioUrl;
+      if (audioUrl.startsWith('/manus-storage/')) {
+        // Build absolute URL from current origin
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+        const host = process.env.HOSTNAME || 'localhost:3000';
+        audioUrl = `${protocol}://${host}${audioUrl}`;
+      }
+      
+      const response = await fetch(audioUrl);
       if (!response.ok) {
         return {
           error: "Failed to download audio file",
