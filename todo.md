@@ -50,6 +50,16 @@
 - [x] Hata düzeltme ve iyileştirme önerisi
 - [x] Kod kopyalama butonu
 
+## Yapay Zeka Araçları Kutuları
+- [x] Video İyileştirici sayfasına AI araçları kutuları ekle (Runwayml, Topaz, Adobe Firefly vb.)
+- [x] Ses Değiştirici sayfasına AI araçları kutuları ekle (Descript, Synthesia, ElevenLabs vb.)
+- [x] Her kutuda araç adı, açıklama ve dış link olacak
+
+## Sunum Örnekleri
+- [x] Sunum sayfasına "Örnekler" bölümü ekle
+- [x] Paragrafmetniniz.pptx dosyasını örnek olarak göster
+- [x] Diğer örnek dosyaları ekle (kullanıcı tarafından sağlanacak)
+
 ## Test
 - [x] presentation router testi
 - [x] logo router testi

@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   Wand2,
+  FileDown,
 } from "lucide-react";
 
 type Slide = {
@@ -32,6 +33,22 @@ type PresentationResult = {
   slides: Slide[];
   summary: string;
 };
+
+type ExampleFile = {
+  name: string;
+  url: string;
+  description: string;
+  icon: string;
+};
+
+const exampleFiles: ExampleFile[] = [
+  {
+    name: "Bilişim Teknolojileri Sunumu",
+    url: "/manus-storage/Paragrafmetniniz_8a46d91b.pptx",
+    description: "Profesyonel sunum örneği - Bilişim Teknolojileri Bölümü",
+    icon: "📊",
+  },
+];
 
 export default function PresentationTool() {
   const [inputText, setInputText] = useState("");
@@ -254,11 +271,46 @@ export default function PresentationTool() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Examples Section */}
+            <Card className="border-border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-green-600" />
+                  Örnekler
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {exampleFiles.map((example) => (
+                  <div
+                    key={example.name}
+                    className="p-3 border border-border rounded-lg hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="text-2xl mb-2">{example.icon}</div>
+                        <h4 className="font-medium text-foreground text-sm">{example.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{example.description}</p>
+                      </div>
+                    </div>
+                    <a href={example.url} download className="mt-3 block">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-xs"
+                      >
+                        <FileDown className="w-3 h-3" />
+                        İndir
+                      </Button>
+                    </a>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Result Panel */}
-          <div className="lg:col-span-3">
-            {result ? (
+          <div className="lg:col-span-3">          {result ? (
               <div className="space-y-4">
                 {/* Summary Card */}
                 <Card className="border-blue-200 bg-blue-50/50 shadow-sm">
