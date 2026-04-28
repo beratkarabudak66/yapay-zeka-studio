@@ -16,6 +16,7 @@ import {
   Download,
   CheckCircle2,
   ExternalLink,
+  Play,
 } from "lucide-react";
 
 type ToneOption = {
@@ -381,6 +382,31 @@ export default function VoiceTool() {
               )}
             </>
           )}
+
+          {/* Example Video Section */}
+          <Card className="border-green-200 bg-green-50/50 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Play className="w-4 h-4 text-green-600" />
+                Örnek Video
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-lg overflow-hidden bg-black">
+                <video
+                  controls
+                  className="w-full h-auto"
+                  poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23333' width='400' height='300'/%3E%3C/svg%3E"
+                >
+                  <source src="/manus-storage/ÖzgürVideo_b5c57528.mp4" type="video/mp4" />
+                  Tarayıcınız video oynatmayı desteklemiyor.
+                </video>
+              </div>
+              <p className="text-sm text-gray-600">
+                Bu örnek videoyu dinleyin ve transkripsiyon, ses analizi ve tonu değiştirme özelliklerini test edin.
+              </p>
+            </CardContent>
+          </Card>
 
           {/* AI Tools Section */}
           <div>
