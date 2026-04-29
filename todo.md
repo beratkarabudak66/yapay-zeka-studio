@@ -63,6 +63,10 @@
 ## Ses Değiştirici Örnek Video
 - [x] Video bölümü kaldırıldı (oynatma sorunları nedeniyle)
 
+## Ağ Erişim Sorunu Düzeltmesi
+- [x] tRPC URL'sini dinamik hale getir (window.location.origin kullan)
+- [x] Farklı ağlarda erişim test edildi
+
 ## Test
 - [x] presentation router testi
 - [x] logo router testi
