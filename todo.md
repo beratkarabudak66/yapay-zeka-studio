@@ -67,6 +67,11 @@
 - [x] tRPC URL'sini dinamik hale getir (window.location.origin kullan)
 - [x] Farklı ağlarda erişim test edildi
 
+## Ana Sayfa Yeniden Tasarımı
+- [x] Hero bölümü — "Başlayın" ve "Okulumuz Hakkında" butonları
+- [x] "Okulumuz Hakkında" → Suzan Mehmet Gönç okulunun sitesine yönlendirme
+- [x] "Başlayın" → Araçlar grid'i göster (modal veya yeni sayfa)
+
 ## Test
 - [x] presentation router testi
 - [x] logo router testi

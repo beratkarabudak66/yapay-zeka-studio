@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import {
   Shield,
   Users,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 
 const tools = [
@@ -109,18 +111,136 @@ const features = [
 ];
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-white">
-      {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-16 pb-20">
-        {/* Background decoration */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-blue-50/80 to-transparent rounded-full blur-3xl" />
-          <div className="absolute top-20 right-10 w-32 h-32 bg-purple-100/60 rounded-full blur-2xl" />
-          <div className="absolute top-32 left-10 w-24 h-24 bg-emerald-100/60 rounded-full blur-2xl" />
+  const [showTools, setShowTools] = useState(false);
+
+  if (showTools) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Header */}
+        <div className="border-b border-border bg-white sticky top-0 z-50">
+          <div className="container flex items-center justify-between h-16">
+            <button
+              onClick={() => setShowTools(false)}
+              className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 rotate-180" />
+              <span className="font-medium">Geri</span>
+            </button>
+            <h1 className="text-xl font-bold text-foreground">AI Araçları</h1>
+            <div className="w-16" />
+          </div>
         </div>
 
-        <div className="container relative text-center">
+        {/* Tools Grid */}
+        <section className="py-16">
+          <div className="container">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {tools.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link key={tool.id} href={tool.href}>
+                    <Card
+                      className={`tool-card h-full border-2 border-border ${tool.borderColor} cursor-pointer bg-white shadow-sm`}
+                    >
+                      <CardContent className="p-6 flex flex-col h-full">
+                        {/* Icon */}
+                        <div
+                          className={`w-12 h-12 rounded-xl ${tool.bg} flex items-center justify-center mb-4 shadow-sm`}
+                        >
+                          <Icon className={`w-6 h-6 ${tool.iconColor}`} />
+                        </div>
+
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-foreground">{tool.label}</h3>
+                          <Badge variant="secondary" className="text-xs shrink-0 ml-2">
+                            {tool.badge}
+                          </Badge>
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-muted-foreground text-sm leading-relaxed flex-1 mb-4">
+                          {tool.description}
+                        </p>
+
+                        {/* CTA */}
+                        <div
+                          className={`flex items-center gap-2 text-sm font-medium bg-gradient-to-r ${tool.color} bg-clip-text text-transparent`}
+                        >
+                          Kullanmaya Başla
+                          <ArrowRight className="w-4 h-4 text-current" style={{ color: "inherit" }} />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+
+              {/* Coming Soon card */}
+              <Card className="border-2 border-dashed border-border bg-slate-50/50 flex items-center justify-center min-h-[220px]">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                    <Sparkles className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-muted-foreground">Yakında Yeni Araçlar</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">Daha fazlası geliyor...</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="py-16 bg-slate-50/50">
+          <div className="container">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {features.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div
+                    key={f.title}
+                    className="flex items-start gap-4 p-6 rounded-2xl bg-white border border-border shadow-sm"
+                  >
+                    <div className={`w-10 h-10 rounded-xl ${f.bg} flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-5 h-5 ${f.color}`} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-1">{f.title}</h3>
+                      <p className="text-sm text-muted-foreground">{f.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-border py-8 bg-slate-50/50">
+          <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="font-medium text-foreground">Yapay Zeka Stüdyo</span>
+            </div>
+            <p>© 2025 Yapay Zeka Stüdyo. Öğrenciler için tasarlandı.</p>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
+      {/* Hero Section */}
+      <section className="w-full max-w-2xl text-center">
+        {/* Background decoration */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-gradient-to-b from-blue-50/80 to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-1/3 right-10 w-32 h-32 bg-purple-100/60 rounded-full blur-2xl" />
+          <div className="absolute top-1/2 left-10 w-24 h-24 bg-emerald-100/60 rounded-full blur-2xl" />
+        </div>
+
+        <div className="relative z-10">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />
@@ -128,36 +248,38 @@ export default function Home() {
           </div>
 
           {/* Heading */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
             Yapay Zeka ile{" "}
             <span className="gradient-text">Üretkenliğini</span>
             <br />
             Bir Üst Seviyeye Taşı
           </h1>
 
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-12 leading-relaxed">
             Sunum hazırla, logo üret, ses ve video düzenle, kod yaz — hepsi tek platformda,
             tek tıkla. Öğrenciler için tasarlanmış güçlü AI araçları.
           </p>
 
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/presentation">
-              <Button size="lg" className="gap-2 px-8 shadow-lg shadow-primary/25">
-                Hemen Başla
-                <ArrowRight className="w-4 h-4" />
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+            <Button
+              size="lg"
+              className="gap-2 px-8 shadow-lg shadow-primary/25 w-full sm:w-auto"
+              onClick={() => setShowTools(true)}
+            >
+              Başlayın
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+            <a href="https://suzanmehmetgonc.meb.k12.tr/" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="lg" className="gap-2 px-8 w-full sm:w-auto">
+                Okulumuz Hakkında
+                <ExternalLink className="w-4 h-4" />
               </Button>
-            </Link>
-            <Link href="#tools">
-              <Button variant="outline" size="lg" className="gap-2 px-8">
-                Araçları Keşfet
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
+            </a>
           </div>
 
           {/* Stats */}
-          <div className="flex items-center justify-center gap-8 mt-12 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-foreground text-base">5</span> AI Araç
             </div>
@@ -173,99 +295,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Tools Grid ─────────────────────────────────────────────────── */}
-      <section id="tools" className="py-16 bg-slate-50/50">
-        <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-3">AI Araçlarımız</h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              Her araç, öğrencilerin ihtiyaçlarına özel olarak tasarlandı.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tools.map((tool) => {
-              const Icon = tool.icon;
-              return (
-                <Link key={tool.id} href={tool.href}>
-                  <Card
-                    className={`tool-card h-full border-2 border-border ${tool.borderColor} cursor-pointer bg-white shadow-sm`}
-                  >
-                    <CardContent className="p-6 flex flex-col h-full">
-                      {/* Icon */}
-                      <div
-                        className={`w-12 h-12 rounded-xl ${tool.bg} flex items-center justify-center mb-4 shadow-sm`}
-                      >
-                        <Icon className={`w-6 h-6 ${tool.iconColor}`} />
-                      </div>
-
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-foreground">{tool.label}</h3>
-                        <Badge variant="secondary" className="text-xs shrink-0 ml-2">
-                          {tool.badge}
-                        </Badge>
-                      </div>
-
-                      {/* Description */}
-                      <p className="text-muted-foreground text-sm leading-relaxed flex-1 mb-4">
-                        {tool.description}
-                      </p>
-
-                      {/* CTA */}
-                      <div
-                        className={`flex items-center gap-2 text-sm font-medium bg-gradient-to-r ${tool.color} bg-clip-text text-transparent`}
-                      >
-                        Kullanmaya Başla
-                        <ArrowRight className="w-4 h-4 text-current" style={{ color: "inherit" }} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-
-            {/* Coming Soon card */}
-            <Card className="border-2 border-dashed border-border bg-slate-50/50 flex items-center justify-center min-h-[220px]">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                  <Sparkles className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <p className="font-medium text-muted-foreground">Yakında Yeni Araçlar</p>
-                <p className="text-sm text-muted-foreground/70 mt-1">Daha fazlası geliyor...</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ───────────────────────────────────────────────────── */}
-      <section className="py-16">
-        <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {features.map((f) => {
-              const Icon = f.icon;
-              return (
-                <div
-                  key={f.title}
-                  className="flex items-start gap-4 p-6 rounded-2xl bg-white border border-border shadow-sm"
-                >
-                  <div className={`w-10 h-10 rounded-xl ${f.bg} flex items-center justify-center shrink-0`}>
-                    <Icon className={`w-5 h-5 ${f.color}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground">{f.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <footer className="border-t border-border py-8 bg-slate-50/50">
+      {/* Footer */}
+      <footer className="w-full border-t border-border py-8 bg-slate-50/50 mt-auto">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
