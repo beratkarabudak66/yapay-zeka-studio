@@ -369,6 +369,14 @@ export default function CodingAssistant() {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-6 mt-8 bg-slate-50/50">
+        <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          <p>© 2025 Yapay Zeka Stüdyo. Öğrenciler için tasarlandı.</p>
+          <span className="font-medium text-primary">Tasarımcı: @Beratkarabudak</span>
+        </div>
+      </footer>
     </div>
   );
 }

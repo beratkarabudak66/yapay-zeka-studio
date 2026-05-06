@@ -220,9 +220,9 @@ export default function Home() {
           <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-medium text-foreground">Yapay Zeka Stüdyo</span>
+              <span className="font-medium text-foreground">SMG Yapay Zeka</span>
             </div>
-            <p>© 2025 Yapay Zeka Stüdyo. Öğrenciler için tasarlandı.</p>
+            <p>© 2025 SMG Yapay Zeka. Öğrenciler için tasarlandı.</p>
           </div>
         </footer>
       </div>
@@ -249,7 +249,7 @@ export default function Home() {
 
           {/* Heading */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
-            Yapay Zeka ile{" "}
+            SMG Yapay Zeka ile{" "}
             <span className="gradient-text">Üretkenliğini</span>
             <br />
             Bir Üst Seviyeye Taşı
@@ -270,7 +270,7 @@ export default function Home() {
               Başlayın
               <ArrowRight className="w-4 h-4" />
             </Button>
-            <a href="https://suzanmehmetgonc.meb.k12.tr/" target="_blank" rel="noopener noreferrer">
+            <a href="https://smgmtal.meb.k12.tr/" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="lg" className="gap-2 px-8 w-full sm:w-auto">
                 Okulumuz Hakkında
                 <ExternalLink className="w-4 h-4" />
@@ -300,9 +300,12 @@ export default function Home() {
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="font-medium text-foreground">Yapay Zeka Stüdyo</span>
+            <span className="font-medium text-foreground">SMG Yapay Zeka</span>
           </div>
-          <p>© 2025 Yapay Zeka Stüdyo. Öğrenciler için tasarlandı.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <p>© 2025 SMG Yapay Zeka. Öğrenciler için tasarlandı.</p>
+            <span className="text-xs font-medium text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text" style={{fontFamily: "'Poppins', 'Segoe UI', sans-serif", fontWeight: "700", letterSpacing: "-0.5px"}}>Made by @Beratkarabudak</span>
+          </div>
         </div>
       </footer>
     </div>
