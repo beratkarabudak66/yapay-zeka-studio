@@ -304,7 +304,7 @@ export default function Home() {
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <p>© 2025 SMG Yapay Zeka. Öğrenciler için tasarlandı.</p>
-            <span className="text-xs font-medium text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text" style={{fontFamily: "'Poppins', 'Segoe UI', sans-serif", fontWeight: "700", letterSpacing: "-0.5px"}}>Made by @Beratkarabudak</span>
+            <span className="text-sm font-bold text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text" style={{fontFamily: "'Poppins', sans-serif", fontWeight: "800", letterSpacing: "-0.3px", fontSize: "14px"}}>✨ Made by @Beratkarabudak</span>
           </div>
         </div>
       </footer>

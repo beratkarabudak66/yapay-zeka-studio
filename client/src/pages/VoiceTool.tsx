@@ -418,8 +418,8 @@ export default function VoiceTool() {
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-8 bg-slate-50/50">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© 2025 Yapay Zeka Stüdyo. Öğrenciler için tasarlandı.</p>
-          <span className="font-medium text-primary">Tasarımcı: @Beratkarabudak</span>
+          <p>© 2025 SMG Yapay Zeka. Öğrenciler için tasarlandı.</p>
+          <span className="text-sm font-bold text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text" style={{fontFamily: "'Poppins', sans-serif", fontWeight: "800", letterSpacing: "-0.3px"}}>Made by @Beratkarabudak</span>
         </div>
       </footer>
     </div>
