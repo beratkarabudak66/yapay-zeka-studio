@@ -434,12 +434,39 @@ Yanıtını şu JSON formatında ver:
 // ── File Upload ────────────────────────────────────────────────────────────
 
 export const uploadRouter = router({
+  uploadFile: publicProcedure
+    .input(
+      z.object({
+        fileName: z.string(),
+        fileType: z.string(),
+        toolType: z.enum(["presentation", "logo", "voice", "video", "coding", "video-test"]),
+        base64: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const buffer = Buffer.from(input.base64, "base64");
+      const fileKey = `uploads/${input.toolType}/${Date.now()}-${input.fileName}`;
+      const { key, url } = await storagePut(fileKey, buffer, input.fileType);
+
+      if (ctx.user) {
+        await createUpload({
+          userId: ctx.user.id,
+          fileName: input.fileName,
+          fileKey: key,
+          fileUrl: url,
+          fileType: input.fileType,
+          toolType: input.toolType,
+        });
+      }
+
+      return { key, url };
+    }),
   getUploadUrl: publicProcedure
     .input(
       z.object({
         fileName: z.string(),
         fileType: z.string(),
-        toolType: z.enum(["presentation", "logo", "voice", "video", "coding"]),
+        toolType: z.enum(["presentation", "logo", "voice", "video", "coding", "video-test"]),
         fileBase64: z.string(),
       })
     )
@@ -460,5 +487,155 @@ export const uploadRouter = router({
       }
 
       return { key, url };
+    }),
+});
+
+// ── Video Test Tool ───────────────────────────────────────────────────────
+
+export const videoTestRouter = router({
+  analyze: publicProcedure
+    .input(
+      z.object({
+        videoUrl: z.string(),
+        fileName: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `Sen bir video analiz uzmanısın. Verilen video URL'sini analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
+
+Analiz kriterleri:
+1. Yüz hareketleri ve doğallığı
+2. Göz hareketi ve kontağı
+3. Ses-dudak senkronizasyonu
+4. Arka plan tutarlılığı
+5. Aydınlatma ve gölge tutarlılığı
+6. Cilt dokusu ve detaylar
+7. Saç hareketi ve fizik
+8. Genel animasyon kalitesi
+
+Çıktıyı şu JSON formatında ver:
+{
+  "isAI": true/false,
+  "confidence": 0-100,
+  "type": "AI Generated" | "Real Human" | "Uncertain",
+  "analysis": {
+    "faceMovement": "açıklama",
+    "eyeContact": "açıklama",
+    "lipSync": "açıklama",
+    "background": "açıklama",
+    "lighting": "açıklama",
+    "skinTexture": "açıklama",
+    "hairMovement": "açıklama",
+    "animation": "açıklama"
+  },
+  "indicators": ["gösterge 1", "gösterge 2"],
+  "summary": "Kısa özet"
+}`,
+            },
+            {
+              role: "user",
+              content: `Bu videoyu analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle: ${input.videoUrl}`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "video_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  isAI: { type: "boolean" },
+                  confidence: { type: "number", minimum: 0, maximum: 100 },
+                  type: { type: "string", enum: ["AI Generated", "Real Human", "Uncertain"] },
+                  analysis: {
+                    type: "object",
+                    properties: {
+                      faceMovement: { type: "string" },
+                      eyeContact: { type: "string" },
+                      lipSync: { type: "string" },
+                      background: { type: "string" },
+                      lighting: { type: "string" },
+                      skinTexture: { type: "string" },
+                      hairMovement: { type: "string" },
+                      animation: { type: "string" },
+                    },
+                    required: ["faceMovement", "eyeContact", "lipSync", "background", "lighting", "skinTexture", "hairMovement", "animation"],
+                    additionalProperties: false,
+                  },
+                  indicators: { type: "array", items: { type: "string" } },
+                  summary: { type: "string" },
+                },
+                required: ["isAI", "confidence", "type", "analysis", "indicators", "summary"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        let analysisResult;
+        try {
+          const content = response.choices?.[0]?.message?.content;
+          if (typeof content === "string") {
+            analysisResult = JSON.parse(content);
+          } else {
+            analysisResult = content;
+          }
+        } catch (parseError) {
+          analysisResult = {
+            isAI: null,
+            confidence: 0,
+            type: "Uncertain",
+            analysis: {
+              faceMovement: "Analiz yapılamadı",
+              eyeContact: "Analiz yapılamadı",
+              lipSync: "Analiz yapılamadı",
+              background: "Analiz yapılamadı",
+              lighting: "Analiz yapılamadı",
+              skinTexture: "Analiz yapılamadı",
+              hairMovement: "Analiz yapılamadı",
+              animation: "Analiz yapılamadı",
+            },
+            indicators: [],
+            summary: "Video analiz edilemedi. Lütfen başka bir video deneyin.",
+          };
+        }
+
+        if (ctx.user) {
+          await createOutput({
+            userId: ctx.user.id,
+            outputKey: `video-test-${Date.now()}`,
+            outputUrl: "",
+            toolType: "video-test",
+            metadata: JSON.stringify(analysisResult),
+          });
+        }
+
+        return analysisResult;
+      } catch (error) {
+        console.error("[Video Test] Error:", error);
+        return {
+          isAI: null,
+          confidence: 0,
+          type: "Uncertain",
+          analysis: {
+            faceMovement: "Hata",
+            eyeContact: "Hata",
+            lipSync: "Hata",
+            background: "Hata",
+            lighting: "Hata",
+            skinTexture: "Hata",
+            hairMovement: "Hata",
+            animation: "Hata",
+          },
+          indicators: [],
+          summary: "Video analiz sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+        };
+      }
     }),
 });

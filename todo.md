@@ -77,3 +77,11 @@
 - [x] logo router testi
 - [x] coding router testi
 - [x] auth logout testi
+
+## Video Test Aracı (/video-test)
+- [x] Video dosyası yükleme alanı
+- [x] AI ile video analiz: yapay zeka vs gerçek insan videosu ayırt etme
+- [x] Analiz sonucu ve güven skoru gösterme
+- [x] Detaylı rapor indirme
+- [x] Navbar'a Test butonu eklendi
+- [x] App.tsx'e /video-test rotası eklendi

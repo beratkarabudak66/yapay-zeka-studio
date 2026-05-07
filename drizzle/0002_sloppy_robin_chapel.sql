@@ -1,0 +1,2 @@
+ALTER TABLE `outputs` MODIFY COLUMN `toolType` enum('presentation','logo','voice','video','coding','video-test') NOT NULL;--> statement-breakpoint
+ALTER TABLE `uploads` MODIFY COLUMN `toolType` enum('presentation','logo','voice','video','coding','video-test') NOT NULL;

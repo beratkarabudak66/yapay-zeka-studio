@@ -15,6 +15,13 @@
       "when": 1777390360438,
       "tag": "0001_crazy_wendell_rand",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1778174473905,
+      "tag": "0002_sloppy_robin_chapel",
+      "breakpoints": true
     }
   ]
 }
