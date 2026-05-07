@@ -12,8 +12,6 @@ import VoiceTool from "./pages/VoiceTool";
 import VideoTool from "./pages/VideoTool";
 import VideoTest from "./pages/VideoTest";
 import CodingAssistant from "./pages/CodingAssistant";
-import UserHistory from "./pages/UserHistory";
-import AdminDashboard from "./pages/AdminDashboard";
 
 function Router() {
   return (
@@ -27,8 +25,6 @@ function Router() {
         <Route path="/video" component={VideoTool} />
         <Route path="/video-test" component={VideoTest} />
         <Route path="/coding" component={CodingAssistant} />
-        <Route path="/history" component={UserHistory} />
-        <Route path="/admin/feedbacks" component={AdminDashboard} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

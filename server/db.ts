@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertOutput, InsertUpload, InsertUser, InsertFeedback, outputs, uploads, users, feedbacks } from "../drizzle/schema";
+import { InsertOutput, InsertUpload, InsertUser, outputs, uploads, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -90,26 +90,4 @@ export async function getOutputsByUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(outputs).where(eq(outputs.userId, userId));
-}
-
-// Feedback helpers
-
-export async function createFeedback(data: InsertFeedback) {
-  const db = await getDb();
-  if (!db) throw new Error("DB not available");
-  const [result] = await db.insert(feedbacks).values(data).$returningId();
-  return result;
-}
-
-export async function getAllFeedbacks() {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(feedbacks);
-}
-
-export async function deleteFeedback(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("DB not available");
-  await db.delete(feedbacks).where(eq(feedbacks.id, id));
-  return { success: true };
 }

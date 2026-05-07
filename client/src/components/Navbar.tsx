@@ -14,8 +14,6 @@ import {
   Menu,
   X,
   Zap,
-  History,
-  Shield,
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,7 +23,7 @@ const tools = [
   { label: "Logo", href: "/logo", icon: Image, color: "text-purple-600" },
   { label: "Ses", href: "/voice", icon: Mic, color: "text-emerald-600" },
   { label: "Video", href: "/video", icon: Video, color: "text-orange-600" },
-  { label: "Video Test", href: "/video-test", icon: Zap, color: "text-red-600" },
+  { label: "Test", href: "/video-test", icon: Zap, color: "text-red-600" },
   { label: "Kod", href: "/coding", icon: Code2, color: "text-pink-600" },
 ];
 
@@ -69,38 +67,6 @@ export default function Navbar() {
               );
             })}
           </nav>
-
-          {/* History & Admin Links */}
-          {isAuthenticated && user && (
-            <div className="hidden md:flex items-center gap-1">
-              <Link href="/history">
-                <button
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    location === "/history"
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <History className="w-4 h-4" />
-                  Geçmiş
-                </button>
-              </Link>
-              {user.role === "admin" && (
-                <Link href="/admin/feedbacks">
-                  <button
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      location === "/admin/feedbacks"
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin
-                  </button>
-                </Link>
-              )}
-            </div>
-          )}
 
           {/* Auth */}
           <div className="flex items-center gap-2">
