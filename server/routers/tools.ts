@@ -517,7 +517,7 @@ export const videoTestRouter = router({
           messages: [
             {
               role: "system",
-              content: `Sen bir video analiz uzmanısın. Verilen video URL'sini analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
+              content: `Sen bir video analiz uzmanısın. Verilen video dosyasını analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
 
 Analiz kriterleri:
 1. Yüz hareketleri ve doğallığı
@@ -550,7 +550,19 @@ Analiz kriterleri:
             },
             {
               role: "user",
-              content: `Bu videoyu analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle: ${input.videoUrl}`,
+              content: [
+                {
+                  type: "text",
+                  text: "Bu videoyu analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle:",
+                },
+                {
+                  type: "file_url",
+                  file_url: {
+                    url: input.videoUrl,
+                    mime_type: "video/mp4",
+                  },
+                },
+              ],
             },
           ],
           response_format: {
