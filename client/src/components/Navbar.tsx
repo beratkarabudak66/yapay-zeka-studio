@@ -25,7 +25,7 @@ const tools = [
   { label: "Logo", href: "/logo", icon: Image, color: "text-purple-600" },
   { label: "Ses", href: "/voice", icon: Mic, color: "text-emerald-600" },
   { label: "Video", href: "/video", icon: Video, color: "text-orange-600" },
-  { label: "Test", href: "/video-test", icon: Zap, color: "text-red-600" },
+  { label: "Video Test", href: "/video-test", icon: Zap, color: "text-red-600" },
   { label: "Kod", href: "/coding", icon: Code2, color: "text-pink-600" },
 ];
 
@@ -86,10 +86,10 @@ export default function Navbar() {
                 </button>
               </Link>
               {user.role === "admin" && (
-                <Link href="/admin">
+                <Link href="/admin/feedbacks">
                   <button
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      location === "/admin"
+                      location === "/admin/feedbacks"
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     }`}

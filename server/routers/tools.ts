@@ -4,7 +4,7 @@ import { generateImage } from "../_core/imageGeneration";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
 import { createOutput, createUpload, createFeedback, getAllFeedbacks, deleteFeedback, getOutputsByUser } from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, router, adminProcedure } from "../_core/trpc";
 import { z } from "zod";
 
 // Helper function to check if result is an error
@@ -688,7 +688,7 @@ export const feedbackRouter = router({
       }
     }),
 
-  getAll: publicProcedure.query(async () => {
+  getAll: adminProcedure.query(async () => {
     try {
       const feedbacks = await getAllFeedbacks();
       return feedbacks;
@@ -698,7 +698,7 @@ export const feedbackRouter = router({
     }
   }),
 
-  delete: publicProcedure
+  delete: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       try {

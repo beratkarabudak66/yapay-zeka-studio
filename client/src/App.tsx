@@ -28,7 +28,7 @@ function Router() {
         <Route path="/video-test" component={VideoTest} />
         <Route path="/coding" component={CodingAssistant} />
         <Route path="/history" component={UserHistory} />
-        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/feedbacks" component={AdminDashboard} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

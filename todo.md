@@ -95,16 +95,19 @@
 - [x] Şık tasarım — gradient renkler, smooth animasyon
 
 ## Ana Sayfa Düzeltmeleri
-- [ ] Başlayın butonuna tıklanınca araçlar grid'i modal/kutu olarak göster
-- [ ] "Test yazıyor" metni kaldır
+- [x] Başlayın butonuna tıklanınca araçlar grid'i modal/kutu olarak göster
+- [x] "Test" → "Video Test" olarak değiştirildi (Navbar'da)
 
 ## Admin Dashboard
-- [ ] Geri bildirimleri listeleyen admin sayfası oluştur (/admin/feedbacks)
-- [ ] Admin rotasını App.tsx'e ekle
-- [ ] Admin için role-based access control ekle
+- [x] Geri bildirimleri listeleyen admin sayfası oluştur (/admin/feedbacks)
+- [x] Admin rotasını App.tsx'e ekle (/admin/feedbacks)
+- [x] Admin için role-based access control ekle (adminProcedure ile korunan)
+- [x] Delete procedure'ı ekle (feedback silme işlevi)
+- [x] Backend'de feedback.getAll ve feedback.delete için adminProcedure uygulandı
 
 ## Kullanıcı Geçmişi Sayfası
-- [ ] Giriş yapan kullanıcıların geçmişim sayfası oluştur (/history)
-- [ ] Logo, sunum, kod çıktılarını listele
-- [ ] İndirme bağlantıları ekle
-- [ ] Rotayı App.tsx'e ekle
+- [x] Giriş yapan kullanıcıların geçmişim sayfası oluştur (/history)
+- [x] Logo, sunum, kod çıktılarını listele
+- [x] İndirme bağlantıları ekle (presentation ve coding için metadata indirme desteği)
+- [x] Rotayı App.tsx'e ekle
+- [x] Navbar'a Geçmiş ve Admin linklerini ekle

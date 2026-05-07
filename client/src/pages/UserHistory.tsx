@@ -330,6 +330,48 @@ export default function UserHistory() {
                               </div>
                             )}
 
+                            {(tool === "presentation" || tool === "coding") && output.metadata && (
+                              <div className="pt-4 border-t border-border">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    try {
+                                      const data = JSON.parse(output.metadata || "{}");
+                                      let content = "";
+                                      let filename = "";
+
+                                      if (tool === "presentation") {
+                                        content = JSON.stringify(data, null, 2);
+                                        filename = `sunum-${output.id}.json`;
+                                      } else if (tool === "coding") {
+                                        content = data.code || data.explanation || JSON.stringify(data, null, 2);
+                                        filename = `kod-${output.id}.txt`;
+                                      }
+
+                                      if (content) {
+                                        const blob = new Blob([content], { type: "text/plain" });
+                                        const url = URL.createObjectURL(blob);
+                                        const link = document.createElement("a");
+                                        link.href = url;
+                                        link.download = filename;
+                                        link.click();
+                                        URL.revokeObjectURL(url);
+                                        toast.success("İndirme başladı");
+                                      }
+                                    } catch (error) {
+                                      console.error("İndirme hatası:", error);
+                                      toast.error("İndirme başarısız oldu");
+                                    }
+                                  }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  Metadata İndir
+                                </Button>
+                              </div>
+                            )}
+
                             <div className="flex items-center gap-2 text-xs text-muted-foreground pt-4 border-t border-border">
                               <CheckCircle className="w-4 h-4 text-green-500" />
                               {new Date(output.createdAt).toLocaleString(
