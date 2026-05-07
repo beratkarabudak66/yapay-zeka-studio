@@ -70,6 +70,7 @@ export default function VideoTest() {
     }
 
     setIsLoading(true);
+    setAnalysisResult(null); // Önceki sonuçları temizle
     try {
       const reader = new FileReader();
       reader.onload = async (event) => {
@@ -92,11 +93,21 @@ export default function VideoTest() {
             fileName: videoFile.name,
           });
 
+          console.log("Analiz sonucu:", analysisRes);
           setAnalysisResult(analysisRes);
           toast.success("Video analiz tamamlandı!");
+          
+          // Sonuçlara kaydır
+          setTimeout(() => {
+            const resultsElement = document.querySelector('[data-results]');
+            if (resultsElement) {
+              resultsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 500);
         } catch (error) {
           console.error("Analiz hatası:", error);
           toast.error("Video analiz sırasında bir hata oluştu");
+          setAnalysisResult(null);
         } finally {
           setIsLoading(false);
         }
@@ -106,6 +117,7 @@ export default function VideoTest() {
       console.error("Yükleme hatası:", error);
       toast.error("Dosya yükleme sırasında bir hata oluştu");
       setIsLoading(false);
+      setAnalysisResult(null);
     }
   };
 
@@ -321,7 +333,7 @@ Rapor Tarihi: ${new Date().toLocaleString("tr-TR")}
 
         {/* Analysis Results */}
         {analysisResult && (
-          <div className="mt-12 space-y-6">
+          <div className="mt-12 space-y-6" data-results>
             {/* Main Result Card */}
             <Card
               className={`p-8 border-2 ${
