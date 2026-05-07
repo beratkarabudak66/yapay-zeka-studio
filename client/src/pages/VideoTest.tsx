@@ -90,7 +90,16 @@ export default function VideoTest() {
           });
 
           console.log("Analiz sonucu:", analysisRes);
-          setAnalysisResult(analysisRes);
+          console.log("Type:", typeof analysisRes);
+          console.log("Keys:", Object.keys(analysisRes || {}));
+          
+          if (analysisRes && typeof analysisRes === 'object') {
+            setAnalysisResult(analysisRes as AnalysisResult);
+            console.log("State set edildi");
+          } else {
+            console.error("Geçersiz analiz sonucu:", analysisRes);
+            toast.error("Analiz sonucu geçersiz format");
+          }
           toast.success("Video analiz tamamlandı!");
 
           setTimeout(() => {

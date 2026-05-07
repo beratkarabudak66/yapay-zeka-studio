@@ -21,7 +21,7 @@ export const appRouter = router({
   videoTest: videoTestRouter,
   coding: codingRouter,
   upload: uploadRouter,
-  outputs: uploadRouter,
+  outputs: uploadRouter, // User history için getUserOutputs procedure'ı uploadRouter'da
   feedback: feedbackRouter,
 });
 
