@@ -85,3 +85,11 @@
 - [x] Detaylı rapor indirme
 - [x] Navbar'a Test butonu eklendi
 - [x] App.tsx'e /video-test rotası eklendi
+
+## İletişim Formu
+- [x] Veritabanında feedback tablosu oluştur
+- [x] Backend'de feedback router'ı ekle
+- [x] İletişim formu bileşeni oluştur (ad, email, mesaj, konu)
+- [x] Ana sayfaya i̇letişim formu ekle
+- [x] Form gönderimi başarılı mesajı göster
+- [x] Şık tasarım — gradient renkler, smooth animasyon

@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ExternalLink,
 } from "lucide-react";
+import ContactForm from "@/components/ContactForm";
 
 const tools = [
   {
@@ -189,6 +190,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Contact Form */}
+        <ContactForm />
 
         {/* Features */}
         <section className="py-16 bg-slate-50/50">

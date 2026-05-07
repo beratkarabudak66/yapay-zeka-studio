@@ -3,7 +3,7 @@ import { invokeLLM } from "../_core/llm";
 import { generateImage } from "../_core/imageGeneration";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
-import { createOutput, createUpload } from "../db";
+import { createOutput, createUpload, createFeedback, getAllFeedbacks } from "../db";
 import { publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
@@ -638,4 +638,52 @@ Analiz kriterleri:
         };
       }
     }),
+});
+
+
+// ── Feedback Tool ─────────────────────────────────────────────────────────
+
+export const feedbackRouter = router({
+  submit: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2, "Ad en az 2 karakter olmalı"),
+        email: z.string().email("Geçerli bir email adresi girin"),
+        subject: z.string().min(5, "Konu en az 5 karakter olmalı"),
+        message: z.string().min(10, "Mesaj en az 10 karakter olmalı"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const feedbackId = await createFeedback({
+          userId: ctx.user?.id,
+          name: input.name,
+          email: input.email,
+          subject: input.subject,
+          message: input.message,
+        });
+
+        return {
+          success: true,
+          id: feedbackId.id,
+          message: "Geri bildiriminiz başarıyla gönderildi. Teşekkür ederiz!",
+        };
+      } catch (error) {
+        console.error("[Feedback] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Geri bildirim gönderme sırasında bir hata oluştu",
+        });
+      }
+    }),
+
+  getAll: publicProcedure.query(async () => {
+    try {
+      const feedbacks = await getAllFeedbacks();
+      return feedbacks;
+    } catch (error) {
+      console.error("[Feedback] Error fetching all:", error);
+      return [];
+    }
+  }),
 });
