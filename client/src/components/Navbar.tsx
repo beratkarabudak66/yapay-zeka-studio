@@ -13,7 +13,6 @@ import {
   LogIn,
   Menu,
   X,
-  Zap,
   History,
   Shield,
 } from "lucide-react";
@@ -25,7 +24,6 @@ const tools = [
   { label: "Logo", href: "/logo", icon: Image, color: "text-purple-600" },
   { label: "Ses", href: "/voice", icon: Mic, color: "text-emerald-600" },
   { label: "Video", href: "/video", icon: Video, color: "text-orange-600" },
-  { label: "Video Test", href: "/video-test", icon: Zap, color: "text-red-600" },
   { label: "Kod", href: "/coding", icon: Code2, color: "text-pink-600" },
 ];
 

@@ -29,6 +29,20 @@
       "when": 1778174794487,
       "tag": "0003_left_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1778179664099,
+      "tag": "0004_hard_ultimo",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1778179948055,
+      "tag": "0005_fat_tiger_shark",
+      "breakpoints": true
     }
   ]
 }
