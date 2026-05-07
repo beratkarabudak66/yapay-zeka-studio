@@ -21,6 +21,7 @@ export const appRouter = router({
   videoTest: videoTestRouter,
   coding: codingRouter,
   upload: uploadRouter,
+  outputs: uploadRouter,
   feedback: feedbackRouter,
 });
 

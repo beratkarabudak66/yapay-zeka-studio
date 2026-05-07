@@ -106,3 +106,10 @@ export async function getAllFeedbacks() {
   if (!db) return [];
   return db.select().from(feedbacks);
 }
+
+export async function deleteFeedback(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(feedbacks).where(eq(feedbacks.id, id));
+  return { success: true };
+}

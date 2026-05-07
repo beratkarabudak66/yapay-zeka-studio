@@ -14,6 +14,8 @@ import {
   Menu,
   X,
   Zap,
+  History,
+  Shield,
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -67,6 +69,38 @@ export default function Navbar() {
               );
             })}
           </nav>
+
+          {/* History & Admin Links */}
+          {isAuthenticated && user && (
+            <div className="hidden md:flex items-center gap-1">
+              <Link href="/history">
+                <button
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    location === "/history"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <History className="w-4 h-4" />
+                  Geçmiş
+                </button>
+              </Link>
+              {user.role === "admin" && (
+                <Link href="/admin">
+                  <button
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      location === "/admin"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Shield className="w-4 h-4" />
+                    Admin
+                  </button>
+                </Link>
+              )}
+            </div>
+          )}
 
           {/* Auth */}
           <div className="flex items-center gap-2">

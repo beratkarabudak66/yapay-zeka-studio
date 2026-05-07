@@ -93,3 +93,18 @@
 - [x] Ana sayfaya i̇letişim formu ekle
 - [x] Form gönderimi başarılı mesajı göster
 - [x] Şık tasarım — gradient renkler, smooth animasyon
+
+## Ana Sayfa Düzeltmeleri
+- [ ] Başlayın butonuna tıklanınca araçlar grid'i modal/kutu olarak göster
+- [ ] "Test yazıyor" metni kaldır
+
+## Admin Dashboard
+- [ ] Geri bildirimleri listeleyen admin sayfası oluştur (/admin/feedbacks)
+- [ ] Admin rotasını App.tsx'e ekle
+- [ ] Admin için role-based access control ekle
+
+## Kullanıcı Geçmişi Sayfası
+- [ ] Giriş yapan kullanıcıların geçmişim sayfası oluştur (/history)
+- [ ] Logo, sunum, kod çıktılarını listele
+- [ ] İndirme bağlantıları ekle
+- [ ] Rotayı App.tsx'e ekle

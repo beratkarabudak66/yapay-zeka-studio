@@ -3,7 +3,7 @@ import { invokeLLM } from "../_core/llm";
 import { generateImage } from "../_core/imageGeneration";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
-import { createOutput, createUpload, createFeedback, getAllFeedbacks } from "../db";
+import { createOutput, createUpload, createFeedback, getAllFeedbacks, deleteFeedback, getOutputsByUser } from "../db";
 import { publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
@@ -488,6 +488,17 @@ export const uploadRouter = router({
 
       return { key, url };
     }),
+
+  getUserOutputs: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+    try {
+      const outputs = await getOutputsByUser(ctx.user.id);
+      return outputs;
+    } catch (error) {
+      console.error("[Upload] Error fetching user outputs:", error);
+      return [];
+    }
+  }),
 });
 
 // ── Video Test Tool ───────────────────────────────────────────────────────
@@ -686,4 +697,19 @@ export const feedbackRouter = router({
       return [];
     }
   }),
+
+  delete: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        await deleteFeedback(input.id);
+        return { success: true, message: "Geri bildirim silindi" };
+      } catch (error) {
+        console.error("[Feedback] Error deleting:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Geri bildirim silme sırasında bir hata oluştu",
+        });
+      }
+    }),
 });
