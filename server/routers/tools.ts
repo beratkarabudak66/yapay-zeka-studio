@@ -3,8 +3,8 @@ import { invokeLLM } from "../_core/llm";
 import { generateImage } from "../_core/imageGeneration";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
-import { createOutput, createUpload } from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { createOutput, createUpload, createFeedback, getAllFeedbacks, deleteFeedback, getOutputsByUser } from "../db";
+import { publicProcedure, router, adminProcedure } from "../_core/trpc";
 import { z } from "zod";
 
 // Helper function to check if result is an error
@@ -488,6 +488,17 @@ export const uploadRouter = router({
 
       return { key, url };
     }),
+
+  getUserOutputs: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+    try {
+      const outputs = await getOutputsByUser(ctx.user.id);
+      return outputs;
+    } catch (error) {
+      console.error("[Upload] Error fetching user outputs:", error);
+      return [];
+    }
+  }),
 });
 
 // ── Video Test Tool ───────────────────────────────────────────────────────
@@ -506,40 +517,98 @@ export const videoTestRouter = router({
           messages: [
             {
               role: "system",
-              content: `Sen bir video analiz uzmanısın. Verilen video URL'sini analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
+              content: `Sen bir profesyonel video analiz uzmanısın. Verilen video dosyasını ÇOK DETAYLI analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
 
-Analiz kriterleri:
-1. Yüz hareketleri ve doğallığı
-2. Göz hareketi ve kontağı
-3. Ses-dudak senkronizasyonu
-4. Arka plan tutarlılığı
-5. Aydınlatma ve gölge tutarlılığı
-6. Cilt dokusu ve detaylar
-7. Saç hareketi ve fizik
-8. Genel animasyon kalitesi
+🎬 DETAYLI ANALİZ KRİTERLERİ:
 
-Çıktıyı şu JSON formatında ver:
+1. YÜZ HAREKETLERİ VE DOĞALLIĞI
+   - Yüz kaslarının doğal hareket edip etmediği
+   - Mimiklerin tutarlı ve doğal olup olmadığı
+   - Yapay zeka videolarında sıkça görülen sertlik ve yapaylık
+   - Gerçek insanlarda görülen ince mikro-ifadeler
+
+2. GÖZ KONTAĞI VE HAREKETI
+   - Göz bebeklerinin tutarlı hareket edip etmediği
+   - Göz kırpma sıklığı ve doğallığı
+   - Bakış yönü değişimlerinin doğallığı
+   - Yapay zeka videolarında sıkça görülen yapay göz hareketi
+
+3. SES-DUDAK SENKRONİZASYONU
+   - Dudak hareketinin sesin tam zamanında olup olmadığı
+   - Konuşma sırasında dudakların doğal hareket edip etmediği
+   - Ufak gecikmeler veya hızlanmalar
+
+4. ARKA PLAN TUTARLILIĞI
+   - Arka planın video boyunca tutarlı olup olmadığı
+   - Yapay zeka videolarında sıkça görülen arka plan bozulmaları
+   - Işık ve gölgelerin tutarlılığı
+
+5. AYDINLATMA VE GÖLGE TUTARLILIĞI
+   - Işık kaynağının tutarlı olup olmadığı
+   - Gölgelerin fizik kurallarına uygun olup olmadığı
+   - Yapay zeka videolarında sıkça görülen ışık anomalileri
+   - Yüz ve vücut üzerindeki gölgelerin doğallığı
+
+6. CİLT DOKUSU VE DETAYLAR
+   - Cilt dokusunun gerçekçi olup olmadığı
+   - Gözeneklerin, kırışıklıkların ve detayların görünürlüğü
+   - Yapay zeka videolarında sıkça görülen pürüzsüz ve yapay cilt
+   - Sakal, bıyık gibi ince detayların doğallığı
+
+7. SAÇ HAREKETİ VE FİZİĞİ
+   - Saçların fizik kurallarına uygun hareket edip etmediği
+   - Saç teli hareketlerinin doğallığı
+   - Yapay zeka videolarında sıkça görülen saç bozulmaları
+   - Rüzgar veya hareket sırasında saçların tepkisi
+
+8. GENEL ANİMASYON KALİTESİ
+   - Video genel olarak akıcı mı yoksa sıçramalar var mı
+   - Frame rate tutarlılığı
+   - Yapay zeka videolarında sıkça görülen titremeler
+   - Genel prodüksiyon kalitesi
+
+📊 ÇIKTI FORMATI:
+Çıktıyı MUTLAKA bu JSON formatında ver:
 {
   "isAI": true/false,
-  "confidence": 0-100,
+  "confidence": 0-100 (0=kesinlikle gerçek, 100=kesinlikle yapay zeka),
   "type": "AI Generated" | "Real Human" | "Uncertain",
   "analysis": {
-    "faceMovement": "açıklama",
-    "eyeContact": "açıklama",
-    "lipSync": "açıklama",
-    "background": "açıklama",
-    "lighting": "açıklama",
-    "skinTexture": "açıklama",
-    "hairMovement": "açıklama",
-    "animation": "açıklama"
+    "faceMovement": "detaylı açıklama (minimum 20 kelime)",
+    "eyeContact": "detaylı açıklama (minimum 20 kelime)",
+    "lipSync": "detaylı açıklama (minimum 20 kelime)",
+    "background": "detaylı açıklama (minimum 20 kelime)",
+    "lighting": "detaylı açıklama (minimum 20 kelime)",
+    "skinTexture": "detaylı açıklama (minimum 20 kelime)",
+    "hairMovement": "detaylı açıklama (minimum 20 kelime)",
+    "animation": "detaylı açıklama (minimum 20 kelime)"
   },
-  "indicators": ["gösterge 1", "gösterge 2"],
-  "summary": "Kısa özet"
-}`,
+  "indicators": ["gösterge 1", "gösterge 2", "gösterge 3", "gösterge 4", "gösterge 5"],
+  "summary": "Çok detaylı özet (minimum 50 kelime). Neden bu sonuca vardığını açıkla."
+}
+
+⚠️ ÖNEMLİ NOTLAR:
+- Çok detaylı ve profesyonel analiz yap
+- Her kriter için en az 20 kelimelik açıklama yaz
+- Özette neden bu sonuca vardığını açıkla
+- Güven skorunu gerçekçi ve doğru belirle
+- Eğer emin değilsen "Uncertain" seç`,
             },
             {
               role: "user",
-              content: `Bu videoyu analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle: ${input.videoUrl}`,
+              content: [
+                {
+                  type: "text",
+                  text: "Bu videoyu analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle:",
+                },
+                {
+                  type: "file_url",
+                  file_url: {
+                    url: input.videoUrl,
+                    mime_type: "video/mp4",
+                  },
+                },
+              ],
             },
           ],
           response_format: {
@@ -636,6 +705,69 @@ Analiz kriterleri:
           indicators: [],
           summary: "Video analiz sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
         };
+      }
+    }),
+});
+
+
+// ── Feedback Tool ─────────────────────────────────────────────────────────
+
+export const feedbackRouter = router({
+  submit: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2, "Ad en az 2 karakter olmalı"),
+        email: z.string().email("Geçerli bir email adresi girin"),
+        subject: z.string().min(5, "Konu en az 5 karakter olmalı"),
+        message: z.string().min(10, "Mesaj en az 10 karakter olmalı"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const feedbackId = await createFeedback({
+          userId: ctx.user?.id,
+          name: input.name,
+          email: input.email,
+          subject: input.subject,
+          message: input.message,
+        });
+
+        return {
+          success: true,
+          id: feedbackId.id,
+          message: "Geri bildiriminiz başarıyla gönderildi. Teşekkür ederiz!",
+        };
+      } catch (error) {
+        console.error("[Feedback] Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Geri bildirim gönderme sırasında bir hata oluştu",
+        });
+      }
+    }),
+
+  getAll: adminProcedure.query(async () => {
+    try {
+      const feedbacks = await getAllFeedbacks();
+      return feedbacks;
+    } catch (error) {
+      console.error("[Feedback] Error fetching all:", error);
+      return [];
+    }
+  }),
+
+  delete: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        await deleteFeedback(input.id);
+        return { success: true, message: "Geri bildirim silindi" };
+      } catch (error) {
+        console.error("[Feedback] Error deleting:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Geri bildirim silme sırasında bir hata oluştu",
+        });
       }
     }),
 });

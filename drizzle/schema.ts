@@ -44,3 +44,17 @@ export const outputs = mysqlTable("outputs", {
 
 export type Output = typeof outputs.$inferSelect;
 export type InsertOutput = typeof outputs.$inferInsert;
+
+// Kullanıcı geri bildirimleri
+export const feedbacks = mysqlTable("feedbacks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedbacks.$inferSelect;
+export type InsertFeedback = typeof feedbacks.$inferInsert;

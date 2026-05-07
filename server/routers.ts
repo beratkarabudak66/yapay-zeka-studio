@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { presentationRouter, logoRouter, voiceRouter, videoRouter, codingRouter, uploadRouter, videoTestRouter } from "./routers/tools";
+import { presentationRouter, logoRouter, voiceRouter, videoRouter, codingRouter, uploadRouter, videoTestRouter, feedbackRouter } from "./routers/tools";
 
 export const appRouter = router({
   system: systemRouter,
@@ -21,6 +21,8 @@ export const appRouter = router({
   videoTest: videoTestRouter,
   coding: codingRouter,
   upload: uploadRouter,
+  outputs: uploadRouter,
+  feedback: feedbackRouter,
 });
 
 export type AppRouter = typeof appRouter;

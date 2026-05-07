@@ -85,3 +85,29 @@
 - [x] Detaylı rapor indirme
 - [x] Navbar'a Test butonu eklendi
 - [x] App.tsx'e /video-test rotası eklendi
+
+## İletişim Formu
+- [x] Veritabanında feedback tablosu oluştur
+- [x] Backend'de feedback router'ı ekle
+- [x] İletişim formu bileşeni oluştur (ad, email, mesaj, konu)
+- [x] Ana sayfaya i̇letişim formu ekle
+- [x] Form gönderimi başarılı mesajı göster
+- [x] Şık tasarım — gradient renkler, smooth animasyon
+
+## Ana Sayfa Düzeltmeleri
+- [x] Başlayın butonuna tıklanınca araçlar grid'i modal/kutu olarak göster
+- [x] "Test" → "Video Test" olarak değiştirildi (Navbar'da)
+
+## Admin Dashboard
+- [x] Geri bildirimleri listeleyen admin sayfası oluştur (/admin/feedbacks)
+- [x] Admin rotasını App.tsx'e ekle (/admin/feedbacks)
+- [x] Admin için role-based access control ekle (adminProcedure ile korunan)
+- [x] Delete procedure'ı ekle (feedback silme işlevi)
+- [x] Backend'de feedback.getAll ve feedback.delete için adminProcedure uygulandı
+
+## Kullanıcı Geçmişi Sayfası
+- [x] Giriş yapan kullanıcıların geçmişim sayfası oluştur (/history)
+- [x] Logo, sunum, kod çıktılarını listele
+- [x] İndirme bağlantıları ekle (presentation ve coding için metadata indirme desteği)
+- [x] Rotayı App.tsx'e ekle
+- [x] Navbar'a Geçmiş ve Admin linklerini ekle
