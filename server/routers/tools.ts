@@ -513,37 +513,21 @@ export const videoTestRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
-        // Önce videoyu transkribe et
-        let transcription = "";
-        try {
-          const transcriptionResult = await transcribeAudio({
-            audioUrl: input.videoUrl,
-            language: "tr",
-            prompt: "Transcribe this video content",
-          });
-          
-          if (!isTranscriptionError(transcriptionResult)) {
-            transcription = transcriptionResult.text || "";
-          }
-        } catch (transcribeError) {
-          console.warn("[Video Test] Transcription failed, continuing with analysis", transcribeError);
-        }
-
         const response = await invokeLLM({
           messages: [
             {
               role: "system",
-              content: `Sen bir video analiz uzmanısın. Video transkripsiyon ve içeriğine dayalı olarak videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
+              content: `Sen bir video analiz uzmanısın. Verilen video URL'sini analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
 
 Analiz kriterleri:
-1. Ses kalitesi ve doğallığı
-2. Konuşma akışı ve tutarlılığı
-3. Arka plan sesleri (doğal mı yapay mı)
-4. Transkripsiyon metni doğallığı
-5. Duraklamalar ve ritim
-6. Vurgu ve tonlama
-7. Tekrarlar ve disfluencies (doğal konuşma göstergesi)
-8. Genel prodüksiyon kalitesi
+1. Yüz hareketleri ve doğallığı
+2. Göz hareketi ve kontağı
+3. Ses-dudak senkronizasyonu
+4. Arka plan tutarlılığı
+5. Aydınlatma ve gölge tutarlılığı
+6. Cilt dokusu ve detaylar
+7. Saç hareketi ve fizik
+8. Genel animasyon kalitesi
 
 Çıktıyı şu JSON formatında ver:
 {
@@ -551,14 +535,14 @@ Analiz kriterleri:
   "confidence": 0-100,
   "type": "AI Generated" | "Real Human" | "Uncertain",
   "analysis": {
-    "faceMovement": "Ses ve konuşma kalitesi",
-    "eyeContact": "Konuşma doğallığı",
-    "lipSync": "Ses-metin senkronizasyonu",
-    "background": "Arka plan sesleri",
-    "lighting": "Üretim kalitesi",
-    "skinTexture": "Ses tekstürü",
-    "hairMovement": "Transkripsiyon tutarlılığı",
-    "animation": "Genel yapay zeka göstergeleri"
+    "faceMovement": "açıklama",
+    "eyeContact": "açıklama",
+    "lipSync": "açıklama",
+    "background": "açıklama",
+    "lighting": "açıklama",
+    "skinTexture": "açıklama",
+    "hairMovement": "açıklama",
+    "animation": "açıklama"
   },
   "indicators": ["gösterge 1", "gösterge 2"],
   "summary": "Kısa özet"
@@ -566,11 +550,7 @@ Analiz kriterleri:
             },
             {
               role: "user",
-              content: `Bu video transkripsiyon ve içeriğine dayalı olarak analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle:
-
-Transkripsiyon: ${transcription || "Transkripsiyon alınamadı"}
-
-Video URL: ${input.videoUrl}`,
+              content: `Bu videoyu analiz et ve yapay zeka mı yoksa gerçek insan videosu mu olduğunu belirle: ${input.videoUrl}`,
             },
           ],
           response_format: {
