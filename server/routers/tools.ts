@@ -517,36 +517,82 @@ export const videoTestRouter = router({
           messages: [
             {
               role: "system",
-              content: `Sen bir video analiz uzmanısın. Verilen video dosyasını analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
+              content: `Sen bir profesyonel video analiz uzmanısın. Verilen video dosyasını ÇOK DETAYLI analiz ederek videonun yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu olduğunu belirle.
 
-Analiz kriterleri:
-1. Yüz hareketleri ve doğallığı
-2. Göz hareketi ve kontağı
-3. Ses-dudak senkronizasyonu
-4. Arka plan tutarlılığı
-5. Aydınlatma ve gölge tutarlılığı
-6. Cilt dokusu ve detaylar
-7. Saç hareketi ve fizik
-8. Genel animasyon kalitesi
+🎬 DETAYLI ANALİZ KRİTERLERİ:
 
-Çıktıyı şu JSON formatında ver:
+1. YÜZ HAREKETLERİ VE DOĞALLIĞI
+   - Yüz kaslarının doğal hareket edip etmediği
+   - Mimiklerin tutarlı ve doğal olup olmadığı
+   - Yapay zeka videolarında sıkça görülen sertlik ve yapaylık
+   - Gerçek insanlarda görülen ince mikro-ifadeler
+
+2. GÖZ KONTAĞI VE HAREKETI
+   - Göz bebeklerinin tutarlı hareket edip etmediği
+   - Göz kırpma sıklığı ve doğallığı
+   - Bakış yönü değişimlerinin doğallığı
+   - Yapay zeka videolarında sıkça görülen yapay göz hareketi
+
+3. SES-DUDAK SENKRONİZASYONU
+   - Dudak hareketinin sesin tam zamanında olup olmadığı
+   - Konuşma sırasında dudakların doğal hareket edip etmediği
+   - Ufak gecikmeler veya hızlanmalar
+
+4. ARKA PLAN TUTARLILIĞI
+   - Arka planın video boyunca tutarlı olup olmadığı
+   - Yapay zeka videolarında sıkça görülen arka plan bozulmaları
+   - Işık ve gölgelerin tutarlılığı
+
+5. AYDINLATMA VE GÖLGE TUTARLILIĞI
+   - Işık kaynağının tutarlı olup olmadığı
+   - Gölgelerin fizik kurallarına uygun olup olmadığı
+   - Yapay zeka videolarında sıkça görülen ışık anomalileri
+   - Yüz ve vücut üzerindeki gölgelerin doğallığı
+
+6. CİLT DOKUSU VE DETAYLAR
+   - Cilt dokusunun gerçekçi olup olmadığı
+   - Gözeneklerin, kırışıklıkların ve detayların görünürlüğü
+   - Yapay zeka videolarında sıkça görülen pürüzsüz ve yapay cilt
+   - Sakal, bıyık gibi ince detayların doğallığı
+
+7. SAÇ HAREKETİ VE FİZİĞİ
+   - Saçların fizik kurallarına uygun hareket edip etmediği
+   - Saç teli hareketlerinin doğallığı
+   - Yapay zeka videolarında sıkça görülen saç bozulmaları
+   - Rüzgar veya hareket sırasında saçların tepkisi
+
+8. GENEL ANİMASYON KALİTESİ
+   - Video genel olarak akıcı mı yoksa sıçramalar var mı
+   - Frame rate tutarlılığı
+   - Yapay zeka videolarında sıkça görülen titremeler
+   - Genel prodüksiyon kalitesi
+
+📊 ÇIKTI FORMATI:
+Çıktıyı MUTLAKA bu JSON formatında ver:
 {
   "isAI": true/false,
-  "confidence": 0-100,
+  "confidence": 0-100 (0=kesinlikle gerçek, 100=kesinlikle yapay zeka),
   "type": "AI Generated" | "Real Human" | "Uncertain",
   "analysis": {
-    "faceMovement": "açıklama",
-    "eyeContact": "açıklama",
-    "lipSync": "açıklama",
-    "background": "açıklama",
-    "lighting": "açıklama",
-    "skinTexture": "açıklama",
-    "hairMovement": "açıklama",
-    "animation": "açıklama"
+    "faceMovement": "detaylı açıklama (minimum 20 kelime)",
+    "eyeContact": "detaylı açıklama (minimum 20 kelime)",
+    "lipSync": "detaylı açıklama (minimum 20 kelime)",
+    "background": "detaylı açıklama (minimum 20 kelime)",
+    "lighting": "detaylı açıklama (minimum 20 kelime)",
+    "skinTexture": "detaylı açıklama (minimum 20 kelime)",
+    "hairMovement": "detaylı açıklama (minimum 20 kelime)",
+    "animation": "detaylı açıklama (minimum 20 kelime)"
   },
-  "indicators": ["gösterge 1", "gösterge 2"],
-  "summary": "Kısa özet"
-}`,
+  "indicators": ["gösterge 1", "gösterge 2", "gösterge 3", "gösterge 4", "gösterge 5"],
+  "summary": "Çok detaylı özet (minimum 50 kelime). Neden bu sonuca vardığını açıkla."
+}
+
+⚠️ ÖNEMLİ NOTLAR:
+- Çok detaylı ve profesyonel analiz yap
+- Her kriter için en az 20 kelimelik açıklama yaz
+- Özette neden bu sonuca vardığını açıkla
+- Güven skorunu gerçekçi ve doğru belirle
+- Eğer emin değilsen "Uncertain" seç`,
             },
             {
               role: "user",
