@@ -212,6 +212,57 @@ export default function VideoTool() {
         {/* Main Content */}
         {step === "upload" && (
           <div className="space-y-8">
+            {/* Upload Area */}
+            <Card className="border-2 border-dashed border-blue-300 bg-blue-50">
+              <CardContent className="pt-12 pb-12">
+                <div className="text-center space-y-6">
+                  <div className="flex justify-center">
+                    <FileVideo className="w-16 h-16 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      Video Dosyası Yükleyin
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      MP4, WebM veya diğer video formatları (Max 16MB)
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    size="lg"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Yükleniyor...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Dosya Seç
+                      </>
+                    )}
+                  </Button>
+                  {uploadedFile && (
+                    <div className="mt-4 p-3 bg-green-100 rounded-lg">
+                      <p className="text-green-800 text-sm">
+                        ✓ {uploadedFile.name} seçildi
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* AI Tools Section */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
