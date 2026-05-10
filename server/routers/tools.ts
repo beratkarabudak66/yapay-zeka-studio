@@ -205,10 +205,26 @@ export const voiceRouter = router({
           },
         });
 
-        const analysisContent = analysisResponse.choices[0]?.message?.content;
-        const analysis = JSON.parse(
-          typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent)
-        );
+        // Handle both direct response and choices array
+        let analysisContent: string | undefined;
+        
+        if (analysisResponse.choices && analysisResponse.choices[0]) {
+          const content = analysisResponse.choices[0]?.message?.content;
+          if (typeof content === 'string') {
+            analysisContent = content;
+          }
+        } else if (typeof analysisResponse === 'string') {
+          analysisContent = analysisResponse;
+        }
+        
+        if (!analysisContent) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "LLM returned empty response",
+          });
+        }
+        
+        const analysis = JSON.parse(analysisContent);
 
         if (ctx.user) {
           await createOutput({
@@ -319,10 +335,26 @@ export const videoRouter = router({
           },
         });
 
-        const analysisContent = analysisResponse.choices[0]?.message?.content;
-        const analysis = JSON.parse(
-          typeof analysisContent === "string" ? analysisContent : JSON.stringify(analysisContent)
-        );
+        // Handle both direct response and choices array
+        let analysisContent: string | undefined;
+        
+        if (analysisResponse.choices && analysisResponse.choices[0]) {
+          const content = analysisResponse.choices[0]?.message?.content;
+          if (typeof content === 'string') {
+            analysisContent = content;
+          }
+        } else if (typeof analysisResponse === 'string') {
+          analysisContent = analysisResponse;
+        }
+        
+        if (!analysisContent) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "LLM returned empty response",
+          });
+        }
+        
+        const analysis = JSON.parse(analysisContent);
 
         if (ctx.user) {
           await createOutput({
