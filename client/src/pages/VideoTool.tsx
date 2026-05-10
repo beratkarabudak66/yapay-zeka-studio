@@ -150,17 +150,55 @@ export default function VideoTool() {
       toast.error("Önce bir video yükleyin.");
       return;
     }
-    toast.loading("Video sıkıştırılıyor...");
-    const originalSize = (uploadedFile.size / 1024 / 1024).toFixed(2);
-    const compressedSize = (uploadedFile.size * 0.5 / 1024 / 1024).toFixed(2);
-    const reduction = 50;
-    const url = URL.createObjectURL(uploadedFile);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = uploadedFile.name.replace(/\.[^/.]+$/, '_compressed.mp4');
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Video sıkıştırıldı! ${originalSize}MB → ${compressedSize}MB (${reduction}% küçültme)`);
+    
+    const toastId = toast.loading("Video sıkıştırılıyor...");
+    
+    try {
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(uploadedFile);
+      video.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Orijinal boyutun %50'sine küçült
+          canvas.width = video.videoWidth * 0.5;
+          canvas.height = video.videoHeight * 0.5;
+          
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const originalSize = (uploadedFile.size / 1024 / 1024).toFixed(2);
+                const newSize = (blob.size / 1024 / 1024).toFixed(2);
+                const reduction = (((uploadedFile.size - blob.size) / uploadedFile.size) * 100).toFixed(1);
+                
+                // İndirme linki oluştur
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = uploadedFile.name.replace(/\.[^/.]+$/, '_compressed.mp4');
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                toast.dismiss(toastId);
+                toast.success(`Video sıkıştırıldı! ${originalSize}MB → ${newSize}MB (${reduction}% küçültme)`);
+              }
+              resolve(null);
+            }, 'video/mp4', 0.7);
+          } else {
+            resolve(null);
+          }
+        };
+      });
+      
+      URL.revokeObjectURL(video.src);
+    } catch (error) {
+      toast.dismiss(toastId);
+      toast.error("Video sıkıştırma hatası: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
+    }
   };
 
   const downloadSubtitles = () => {
