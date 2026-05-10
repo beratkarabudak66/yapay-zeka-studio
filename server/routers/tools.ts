@@ -264,27 +264,27 @@ export const videoRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
-        // Transcribe audio from video
-        const rawTranscription = await transcribeAudio({
-          audioUrl: input.videoUrl,
-          language: "tr",
-          prompt: "Transcribe video content",
-        });
-
-        if (isTranscriptionError(rawTranscription)) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: rawTranscription.error, cause: rawTranscription });
-        }
-        const transcription = rawTranscription;
-
         const analysisResponse = await invokeLLM({
           messages: [
             {
               role: "system",
-              content: `Video içerik analisti olarak şu transkripsiyonu analiz et ve JSON formatında döndür:\n{\n  "summary": "Video özeti",\n  "topics": ["Konu 1", "Konu 2"],\n  "suggestedEnhancements": ["Parlaklık artırma önerilir", "Stabilizasyon gerekli"],\n  "subtitleLines": [{"time": "00:00:01", "text": "Altyazı metni"}],\n  "contentType": "İçerik türü (eğitim/sunum/vlog vb.)"\n}`,
+              content: "Video analisti olarak verilen videoyu analiz et ve JSON formatında döndür. Özet, konular, kalite önerileri ve altyazı satırları sağla.",
             },
             {
               role: "user",
-              content: `Video transkripsiyonu:\n\n${transcription.text}`,
+              content: [
+                {
+                  type: "text",
+                  text: "Bu videoyu analiz et, kalite önerileri ve altyazılar sağla:",
+                },
+                {
+                  type: "file_url",
+                  file_url: {
+                    url: input.videoUrl,
+                    mime_type: "video/mp4",
+                  },
+                },
+              ],
             },
           ],
           response_format: {
@@ -328,12 +328,14 @@ export const videoRouter = router({
           await createOutput({
             userId: ctx.user.id,
             toolType: "video",
-            metadata: JSON.stringify({ transcription: transcription.text, analysis }),
+            outputKey: `video-analysis-${Date.now()}`,
+            outputUrl: "",
+            metadata: JSON.stringify({ analysis }),
           });
         }
 
         return {
-          transcription: transcription.text,
+          transcription: analysis.summary,
           analysis,
         };
       } catch (error) {
@@ -346,6 +348,7 @@ export const videoRouter = router({
       }
     }),
 });
+
 
 // ── Coding Assistant ───────────────────────────────────────────────────────
 
