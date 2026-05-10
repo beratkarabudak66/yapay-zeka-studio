@@ -349,6 +349,7 @@ export const videoRouter = router({
     }),
 });
 
+// ── Coding Assistant
 
 // ── Coding Assistant ───────────────────────────────────────────────────────
 
