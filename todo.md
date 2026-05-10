@@ -128,6 +128,3 @@
 - [x] 8 yeni kriter eklendi: Frame Consistency, Skin Microtexture, Eye Geometry, Cinematic Signature, Motion Physics, Compression Artifacts, Diffusion Smoothing, Overall Perfection
 - [x] Verdict eşikleri sertleştirildi: 55/40 (eski 70/30)
 - [x] Tüm testler geçiyor
-
-## Video İyileştir UI Düzeltme
-- [x] VideoTool.tsx'de dosya yükleme bölümünü kaldır - sadece Video İyileştirme Araçları göster
