@@ -151,17 +151,28 @@ export default function VideoTool() {
       return;
     }
     
-    const originalSize = (uploadedFile.size / 1024 / 1024).toFixed(2);
-    
-    // Video dosyasını indir
-    const url = URL.createObjectURL(uploadedFile);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = uploadedFile.name.replace(/\.[^/.]+$/, '_optimized.mp4');
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast.success(`Video hazırlandı! Boyut: ${originalSize}MB`);
+    try {
+      const originalSize = (uploadedFile.size / 1024 / 1024).toFixed(2);
+      
+      // Video dosyasını doğrudan indir
+      const url = URL.createObjectURL(uploadedFile);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = uploadedFile.name || 'video.mp4';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // URL'yi temizle
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast.success(`Video indirildi! Boyut: ${originalSize}MB`);
+    } catch (error) {
+      console.error('Video indirme hatası:', error);
+      toast.error("Video indirilirken hata oluştu");
+    }
   };
 
   const downloadSubtitles = () => {
