@@ -431,52 +431,55 @@ export const videoRouter = router({
           backgroundStability: 0.15,   // %15
         };
 
-        const aiPrompt = `GÖREV: Bu videoyu ÇOK DETAYLI ve HASSAS analiz ederek AI vs. İnsan ayırımı yap.
+        const aiPrompt = `GÖREV: Bu videoyu AGRESIF AI tespiti için analiz et. Modern AI videoları genelde "fazla kusursuz" görünür. Kusursuzluk İNSAN değil, AI sinyalidir!
 
-KRİTERLER (Her biri FARKLILASTIRILMALI - sabit skorlar YASAK):
+KRİTERLER (AGRESIF PUANLAMA - Kusursuzluk = AI):
 
-1. FRAME FLICKER & CONSISTENCY (%25 ağırlık)
-   - Frame'ler arasında renk değişimi, bozulma, flicker var mı?
-   - Temporal artifacts (zaman içinde tutarsızlık) var mı?
-   - Eğer çok flicker varsa → AI olasılığı YÜKSEK
-   - Eğer hiç flicker yoksa → İnsan olasılığı YÜKSEK
+1. FRAME CONSISTENCY & TEMPORAL STABILITY (%20 ağırlık)
+   - Frame'ler FAZLA stabil mı? (Fazla stabil = AI)
+   - Temporal smoothing var mı? (Var = AI)
+   - Compression anomaly var mı? (Var = AI)
+   - Flicker yoksa bile: Fazla düzgün = AI sinyali
 
-2. YÜZ TUTARLILIĞI & REALISM (%25 ağırlık)
-   - Yüz şekli, oranları, simetrisi tutarlı mı?
-   - Göz, diş, ten detaylarında bozulma var mı?
-   - Yüz kenarlarında warping/distortion var mı?
-   - Eğer bozulmalar varsa → AI olasılığı YÜKSEK
-   - Eğer doğal ve tutarlıysa → İnsan olasılığı YÜKSEK
+2. SKIN MICROTEXTURE REALISM (%20 ağırlık)
+   - Cilt ÇOK temiz mi? (Fazla temiz = AI)
+   - Cilt detayları KUSURSUZ mu? (Kusursuz = AI)
+   - Pore consistency var mı? (Yoksa = AI)
+   - Cilt "wax" veya "plastik" görünüyor mu? (Evet = AI)
+   - Diffusion smoothing hissi var mı? (Var = AI)
 
-3. HAREKET FİZİĞİ (%20 ağırlık)
-   - Hareketler doğal ve akıcı mı?
-   - Ani atlamalar, yapay hareketler var mı?
-   - Fizik kanunlarına uygun mu?
-   - Eğer yapay hareketler varsa → AI olasılığı YÜKSEK
-   - Eğer doğal akış varsa → İnsan olasılığı YÜKSEK
+3. EYE & FACIAL GEOMETRY REALISM (%20 ağırlık)
+   - Göz parlaması FAZLA mı? (Fazla = AI)
+   - Göz reflection KUSURSUZ mu? (Kusursuz = AI)
+   - Yüz simetrisi FAZLA mı? (Fazla = AI)
+   - Hair edge consistency FAZLA mı? (Fazla = AI)
+   - Kenar bozulması YOKSA: Fazla düzgün = AI
 
-4. DOKU GERÇEKÇİLİĞİ (%15 ağırlık)
-   - Cilt, tüy, göz, diş detayları gerçekçi mi?
-   - Mikro bozulmalar var mı?
-   - Doku kalitesi tutarlı mı?
-   - Eğer detaylar yapay görünüyorsa → AI olasılığı YÜKSEK
-   - Eğer doğal detaylar varsa → İnsan olasılığı YÜKSEK
+4. CINEMATIC SIGNATURE & GAN ARTIFACTS (%20 ağırlık)
+   - Video "fazla sinematik" mi? (Fazla = AI)
+   - Kusursuz ışık dağılımı var mı? (Var = AI)
+   - Olağan üstü renk tutarlılığı var mı? (Var = AI)
+   - GAN artifact (blurry background, weird distortions) var mı? (Var = AI)
+   - Sharpening artifact var mı? (Var = AI)
 
-5. ARKA PLAN STABİLİTESİ (%15 ağırlık)
-   - Arka plan sabit ve tutarlı mı?
-   - Warping, bozulma var mı?
-   - Işık-gölge tutarlılığı var mı?
-   - Eğer bozulmalar varsa → AI olasılığı YÜKSEK
-   - Eğer stabil ve tutarlıysa → İnsan olasılığı YÜKSEK
+5. MOTION PHYSICS & NATURALNESS (%20 ağırlık)
+   - Hareketler FAZLA akıcı mı? (Fazla = AI)
+   - Hareket smoothing hissi var mı? (Var = AI)
+   - Fizik kanunları KUSURSUZ mu? (Kusursuz = AI)
+   - Ani atlamalar yoksa bile: Fazla düzgün = AI
+   - Background motion fazla stabil mi? (Evet = AI)
 
 DÖNÜŞ FORMATI (JSON - KESIN):
 {
   "criteria": [
-    {"name": "Frame Flicker & Consistency", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.25, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
-    {"name": "Yüz Tutarlılığı & Realism", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.25, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
-    {"name": "Hareket Fiziği", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.20, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
-    {"name": "Doku Gerçekçiliği", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.15, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
-    {"name": "Arka Plan Stabilitesi", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.15, "explanation": "Neden bu skor? Hangi bulgular gördün?"}
+    {"name": "Frame Consistency & Temporal Stability", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Temporal stability, smoothing, compression anomaly"},
+    {"name": "Skin Microtexture Realism", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Cilt temizliği, pore consistency, wax/plastik görünüm"},
+    {"name": "Eye & Facial Geometry Realism", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Göz parlaması, reflection, yüz simetrisi, hair edges"},
+    {"name": "Cinematic Signature & GAN Artifacts", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Sinematik görünüm, ışık, renk, GAN artifacts"},
+    {"name": "Motion Physics & Naturalness", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Hareket akıcılığı, smoothing, fizik kanunları"},
+    {"name": "Compression & Artifact Detection", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Compression anomaly, encoding artifacts, banding"},
+    {"name": "Diffusion Smoothing Signature", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Diffusion smoothing, over-smoothness, unnatural blur"},
+    {"name": "Overall Perfection Level", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.125, "explanation": "Genel kusursuzluk seviyesi - fazla kusursuz = AI"}
   ],
   "overall": {
     "humanProbability": 0-100,
@@ -486,13 +489,18 @@ DÖNÜŞ FORMATI (JSON - KESIN):
   }
 }
 
-ÖNEMLİ KURALLAR:
-1. SABIT SKORLAR VERME - her video farklı olmalı
-2. "Her video iyi" biası KALDIR
-3. Aşırı yapay görünen videoyu "gerçek" deme
-4. Doğal görünen videoyu "AI" deme
-5. Skorlar video kalitesine ve bulgulara göre değişmeli
-6. humanProbability + aiProbability = 100 olabilir veya olmayabilir (belirsizlik var)`;
+ÖNEMLİ KURALLAR (AGRESIF PUANLAMA):
+1. KUSURSUZLUK = AI SİNYALİ - Fazla temiz, fazla stabil, fazla kusursuz = AI
+2. "Her video iyi" biası TAMAMEN KALDIR
+3. Kaliteli videoları otomatik güvenme - mikro tutarsızlıkları agresif ara
+4. Aşırı sinematik görünen videoyu KESINLIKLE AI olarak işaretle
+5. Fazla düzgün arka planı AI sinyali olarak değerlendir
+6. Fazla kusursuz ışık dağılımını AI sinyali olarak değerlendir
+7. Fazla temiz cilt = AI (gerçek insanın ciltinde daima mikro bozulmalar vardır)
+8. Fazla stabil motion = AI (gerçek insanın hareketinde daima mikro düzensizlikler vardır)
+9. Eğer video "çok iyi" görünüyorsa: AI olasılığını YÜKSELT
+10. Eğer video "biraz kötü" görünüyorsa: İnsan olasılığını YÜKSELT
+`;
 
         const response = await invokeLLM({
           messages: [
@@ -539,8 +547,8 @@ DÖNÜŞ FORMATI (JSON - KESIN):
                       required: ["name", "humanProbability", "aiProbability", "weight", "explanation"],
                       additionalProperties: false,
                     },
-                    minItems: 5,
-                    maxItems: 5,
+                    minItems: 8,
+                    maxItems: 8,
                   },
                   overall: {
                     type: "object",
@@ -581,8 +589,8 @@ DÖNÜŞ FORMATI (JSON - KESIN):
         }
 
         // Validate structure
-        if (!analysis.criteria || !Array.isArray(analysis.criteria) || analysis.criteria.length !== 5) {
-          throw new Error("Invalid criteria array in response");
+        if (!analysis.criteria || !Array.isArray(analysis.criteria) || analysis.criteria.length !== 8) {
+          throw new Error("Invalid criteria array in response - expected 8 criteria");
         }
 
         if (!analysis.overall || typeof analysis.overall !== "object") {
@@ -603,11 +611,12 @@ DÖNÜŞ FORMATI (JSON - KESIN):
         const finalAIProbability = Math.round(weightedAI);
         const finalHumanProbability = Math.round(weightedHuman);
 
-        // Determine verdict based on final score
+        // Determine verdict based on final score - AGRESIF AI TESPITI
+        // Eşikleri düşür: AI > 55% = AI, AI < 40% = Real, else Suspicious
         let verdict = analysis.overall.verdict;
-        if (finalAIProbability > 70) {
+        if (finalAIProbability > 55) {
           verdict = "Büyük ihtimalle AI";
-        } else if (finalAIProbability < 30) {
+        } else if (finalAIProbability < 40) {
           verdict = "Büyük ihtimalle gerçek";
         } else {
           verdict = "Şüpheli / Karışık";

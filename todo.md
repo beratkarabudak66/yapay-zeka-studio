@@ -116,3 +116,15 @@
 - [x] LLM prompt'u yeniden yaz - detaylı, hassas, dinamik skor üretimi
 - [x] Backend scoring logic'i yeniden yaz - ağırlıklı sistem, fallback kaldır
 - [x] Test et ve checkpoint kaydet
+
+## Agresif AI Tespiti Upgrade (KRİTİK)
+- [x] LLM prompt'u agresif AI tespiti için yeniden yaz - fazla kusursuz videoları AI olarak işaretle
+- [x] Yeni kriterler ekle: Skin microtexture, Eye reflection, Hair edge, Compression anomaly, Temporal stability, Cinematic signature, GAN artifact, Diffusion smoothing
+- [x] Karar motorunu sertleştir - fazla temiz/sinematik/kusursuz videoları agresif AI skoru ver
+- [x] Test et ve checkpoint kaydet
+
+## Agresif AI Tespiti Tamamlandı
+- [x] LLM prompt agresif AI tespiti için yeniden yazıldı
+- [x] 8 yeni kriter eklendi: Frame Consistency, Skin Microtexture, Eye Geometry, Cinematic Signature, Motion Physics, Compression Artifacts, Diffusion Smoothing, Overall Perfection
+- [x] Verdict eşikleri sertleştirildi: 55/40 (eski 70/30)
+- [x] Tüm testler geçiyor
