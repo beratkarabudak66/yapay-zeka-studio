@@ -179,57 +179,9 @@ export default function VoiceTool() {
 
         {/* Upload Section */}
         <div className="space-y-8">
-          {/* Upload Area */}
-          <Card className="border-2 border-dashed border-blue-300 bg-blue-50">
-            <CardContent className="pt-12 pb-12">
-              <div className="text-center space-y-6">
-                <div className="flex justify-center">
-                  <FileAudio className="w-16 h-16 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Ses veya Video Dosyası Yükleyin
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    MP3, WAV, M4A veya video formatları (Max 16MB)
-                  </p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/*,video/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Yükleniyor...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Dosya Seç
-                    </>
-                  )}
-                </Button>
-                {uploadedFile && (
-                  <div className="mt-4 p-3 bg-green-100 rounded-lg">
-                    <p className="text-green-800 text-sm">✓ {uploadedFile.name} seçildi</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Tone Selection */}
-          {uploadedUrl && !result && (
+          {/* Tone Selection - Removed */}
+          {false && uploadedUrl && !result && (
             <Card className="border-blue-200 bg-blue-50">
               <CardHeader>
                 <CardTitle>Ses Tonu Seçin</CardTitle>

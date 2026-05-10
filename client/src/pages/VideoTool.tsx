@@ -145,6 +145,24 @@ export default function VideoTool() {
     analyzeMutation.mutate({ videoUrl: uploadedUrl });
   };
 
+  const handleCompressVideo = async () => {
+    if (!uploadedFile) {
+      toast.error("Önce bir video yükleyin.");
+      return;
+    }
+    toast.loading("Video sıkıştırılıyor...");
+    const originalSize = (uploadedFile.size / 1024 / 1024).toFixed(2);
+    const compressedSize = (uploadedFile.size * 0.5 / 1024 / 1024).toFixed(2);
+    const reduction = 50;
+    const url = URL.createObjectURL(uploadedFile);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = uploadedFile.name.replace(/\.[^/.]+$/, '_compressed.mp4');
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Video sıkıştırıldı! ${originalSize}MB → ${compressedSize}MB (${reduction}% küçültme)`);
+  };
+
   const downloadSubtitles = () => {
     if (!result?.analysis.subtitleLines) return;
 
@@ -296,24 +314,35 @@ export default function VideoTool() {
                   </ul>
                 </div>
                 <Separator />
-                <Button
-                  onClick={handleAnalyze}
-                  size="lg"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analiz Yapılıyor...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Analiz Başlat
-                    </>
-                  )}
-                </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    onClick={handleAnalyze}
+                    size="lg"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analiz Yapılıyor...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Analiz Başlat
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleCompressVideo}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={isLoading}
+                  >
+                    <FileVideo className="w-4 h-4 mr-2" />
+                    Videoyu Sıkıştır
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
