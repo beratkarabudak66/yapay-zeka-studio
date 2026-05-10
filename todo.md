@@ -128,3 +128,7 @@
 - [x] 8 yeni kriter eklendi: Frame Consistency, Skin Microtexture, Eye Geometry, Cinematic Signature, Motion Physics, Compression Artifacts, Diffusion Smoothing, Overall Perfection
 - [x] Verdict eşikleri sertleştirildi: 55/40 (eski 70/30)
 - [x] Tüm testler geçiyor
+
+## UI Düzeltmeler - Navigation ve Video İyileştir
+- [x] Home.tsx'de "Video Test" linkini "AI Test" olarak değiştir ve route'u /ai-video-test yapıştır
+- [x] VideoTool.tsx'de indirme butonlarını kaldır (Transkripsiyon İndir, Altyazı İndir)

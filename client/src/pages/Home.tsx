@@ -88,9 +88,9 @@ const tools = [
   },
   {
     id: "video-test",
-    href: "/video-test",
-    icon: Video,
-    label: "Video Test",
+    href: "/ai-video-test",
+    icon: Zap,
+    label: "AI Test",
     description:
       "Yüklenen video yapay zeka tarafından oluşturulmuş mu yoksa gerçek insan videosu mu? AI ile ayırt et.",
     badge: "Analiz",

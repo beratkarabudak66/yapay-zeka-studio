@@ -403,24 +403,6 @@ export default function VideoTool() {
                   <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
                     <p className="text-gray-700 whitespace-pre-wrap">{result.transcription}</p>
                   </div>
-                  <Button
-                    onClick={() => {
-                      const blob = new Blob([result.transcription], {
-                        type: "text/plain;charset=utf-8",
-                      });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "transkripsiyon.txt";
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast.success("Transkripsiyon indirildi!");
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Transkripsiyon İndir
-                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -482,13 +464,7 @@ export default function VideoTool() {
                       </div>
                     ))}
                   </div>
-                  <Button
-                    onClick={downloadSubtitles}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Altyazı İndir (.srt)
-                  </Button>
+
                 </CardContent>
               </Card>
             )}
