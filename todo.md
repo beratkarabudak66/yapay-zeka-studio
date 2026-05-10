@@ -128,3 +128,6 @@
 - [x] 8 yeni kriter eklendi: Frame Consistency, Skin Microtexture, Eye Geometry, Cinematic Signature, Motion Physics, Compression Artifacts, Diffusion Smoothing, Overall Perfection
 - [x] Verdict eşikleri sertleştirildi: 55/40 (eski 70/30)
 - [x] Tüm testler geçiyor
+
+## UI Düzeltmeler
+- [x] AI Test sayfasında video tıklama sonrası dosya yükleyin bölümünü kaldır - sadece Video Seç butonu göster

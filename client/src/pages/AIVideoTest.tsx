@@ -156,18 +156,13 @@ export default function AIVideoTest() {
         {step === "upload" && (
           <Card className="border-2 border-dashed border-gray-300 hover:border-purple-400 transition-colors">
             <CardContent className="pt-12 pb-12">
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className="text-center cursor-pointer p-8 rounded-lg border-2 border-dashed border-gray-300 hover:border-purple-400 hover:bg-purple-50 transition-all"
-              >
+              <div className="text-center p-8">
                 <Upload className="w-12 h-12 text-purple-600 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   Video Yükleyin
                 </h3>
-                <p className="text-gray-600 mb-4">
-                  Videoyu sürükleyip bırakın veya tıklayarak seçin
+                <p className="text-gray-600 mb-6">
+                  Videoyu seçerek AI analiz yapabilirsiniz
                 </p>
                 <input
                   ref={fileInputRef}
@@ -189,23 +184,19 @@ export default function AIVideoTest() {
               </div>
 
               {uploadedFile && (
-                <div className="mt-8">
-                  <div className="bg-purple-50 rounded-lg p-4 mb-6">
+                <div className="mt-8 text-center">
+                  <div className="inline-block bg-purple-50 rounded-lg p-4 mb-6">
                     <p className="text-sm text-gray-600">
                       <span className="font-semibold">Seçilen Dosya:</span>{" "}
                       {uploadedFile.name}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-semibold">Boyut:</span>{" "}
-                      {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
                   </div>
 
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 justify-center">
                     <Button
                       onClick={handleTest}
                       disabled={analyzeMutation.isPending}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700"
+                      className="bg-purple-600 hover:bg-purple-700"
                     >
                       {analyzeMutation.isPending ? (
                         <>
