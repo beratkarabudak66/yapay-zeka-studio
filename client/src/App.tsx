@@ -12,6 +12,7 @@ import VoiceTool from "./pages/VoiceTool";
 import VideoTool from "./pages/VideoTool";
 
 import CodingAssistant from "./pages/CodingAssistant";
+import AIVideoTest from "./pages/AIVideoTest";
 import UserHistory from "./pages/UserHistory";
 import AdminDashboard from "./pages/AdminDashboard";
 
@@ -27,6 +28,7 @@ function Router() {
         <Route path="/video" component={VideoTool} />
 
         <Route path="/coding" component={CodingAssistant} />
+        <Route path="/ai-video-test" component={AIVideoTest} />
         <Route path="/history" component={UserHistory} />
         <Route path="/admin/feedbacks" component={AdminDashboard} />
         <Route path="/404" component={NotFound} />

@@ -43,6 +43,13 @@
       "when": 1778179948055,
       "tag": "0005_fat_tiger_shark",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1778416271952,
+      "tag": "0006_small_vermin",
+      "breakpoints": true
     }
   ]
 }

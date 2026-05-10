@@ -15,6 +15,7 @@ import {
   X,
   History,
   Shield,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +26,7 @@ const tools = [
   { label: "Ses", href: "/voice", icon: Mic, color: "text-emerald-600" },
   { label: "Video", href: "/video", icon: Video, color: "text-orange-600" },
   { label: "Kod", href: "/coding", icon: Code2, color: "text-pink-600" },
+  { label: "AI Test", href: "/ai-video-test", icon: Zap, color: "text-purple-600" },
 ];
 
 export default function Navbar() {

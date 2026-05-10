@@ -23,7 +23,7 @@ export const uploads = mysqlTable("uploads", {
   fileKey: varchar("fileKey", { length: 512 }).notNull(),
   fileUrl: varchar("fileUrl", { length: 1024 }).notNull(),
   fileType: varchar("fileType", { length: 64 }).notNull(),
-  toolType: mysqlEnum("toolType", ["presentation", "logo", "voice", "video", "coding", "video-test"]).notNull(),
+  toolType: mysqlEnum("toolType", ["presentation", "logo", "voice", "video", "coding", "video-test", "ai-video-test"]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -37,7 +37,7 @@ export const outputs = mysqlTable("outputs", {
   uploadId: int("uploadId"),
   outputKey: varchar("outputKey", { length: 512 }),
   outputUrl: varchar("outputUrl", { length: 1024 }),
-  toolType: mysqlEnum("toolType", ["presentation", "logo", "voice", "video", "coding", "video-test"]).notNull(),
+  toolType: mysqlEnum("toolType", ["presentation", "logo", "voice", "video", "coding", "video-test", "ai-video-test"]).notNull(),
   metadata: text("metadata"), // JSON string
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
