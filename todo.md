@@ -111,3 +111,8 @@
 - [x] İndirme bağlantıları ekle (presentation ve coding için metadata indirme desteği)
 - [x] Rotayı App.tsx'e ekle
 - [x] Navbar'a Geçmiş ve Admin linklerini ekle
+
+## Video Analiz Engine Düzeltme (KRİTİK)
+- [x] LLM prompt'u yeniden yaz - detaylı, hassas, dinamik skor üretimi
+- [x] Backend scoring logic'i yeniden yaz - ağırlıklı sistem, fallback kaldır
+- [x] Test et ve checkpoint kaydet

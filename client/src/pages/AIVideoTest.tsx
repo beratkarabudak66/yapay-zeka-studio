@@ -50,28 +50,7 @@ export default function AIVideoTest() {
     onError: (error: any) => {
       console.error("❌ Analiz hatası:", error);
       toast.error(error.message || "Analiz sırasında hata oluştu");
-      // Fallback result
-      setResult({
-        criteria: [
-          { name: "Yüz Tutarlılığı", humanProbability: 82, aiProbability: 18, explanation: "Yüz şekli ve oranları tutarlı görünüyor." },
-          { name: "Göz/Diş/Ten Bozulmaları", humanProbability: 75, aiProbability: 25, explanation: "Hafif bozulma izleri tespit edildi." },
-          { name: "Frame Tutarlılığı", humanProbability: 80, aiProbability: 20, explanation: "Frame'ler arasında flicker yok." },
-          { name: "Işık ve Gölge Tutarlılığı", humanProbability: 85, aiProbability: 15, explanation: "Aydınlatma tutarlı ve doğal." },
-          { name: "Hareket Akıcılığı", humanProbability: 78, aiProbability: 22, explanation: "Hareketler doğal ve akıcı." },
-          { name: "Arka Plan Stabilitesi", humanProbability: 88, aiProbability: 12, explanation: "Arka plan sabit ve tutarlı." },
-          { name: "Kenar Bozulmaları", humanProbability: 80, aiProbability: 20, explanation: "Yüz kenarlarında hafif warping." },
-          { name: "Ses Uyumu", humanProbability: 85, aiProbability: 15, explanation: "Dudak hareketi sesin uyumlu." },
-          { name: "Genel Görsel Gerçekçilik", humanProbability: 82, aiProbability: 18, explanation: "Genel olarak gerçekçi görünüyor." },
-          { name: "Detay Seviyesi", humanProbability: 76, aiProbability: 24, explanation: "Doku detayları kısmen gerçekçi." }
-        ],
-        overall: {
-          humanProbability: 81,
-          aiProbability: 19,
-          verdict: "Büyük ihtimalle gerçek",
-          summary: "Video analizi tamamlandı. Genel olarak gerçek bir insan tarafından çekilmiş görünüyor."
-        }
-      });
-      setStep("result");
+      setStep("upload");
     },
   });
 
@@ -132,28 +111,7 @@ export default function AIVideoTest() {
       } catch (error) {
         console.error("❌ Hata:", error);
         toast.error(error instanceof Error ? error.message : "Analiz başarısız");
-        
-        setResult({
-          criteria: [
-            { name: "Yüz Tutarlılığı", humanProbability: 82, aiProbability: 18, explanation: "Yüz şekli ve oranları tutarlı görünüyor." },
-            { name: "Göz/Diş/Ten Bozulmaları", humanProbability: 75, aiProbability: 25, explanation: "Hafif bozulma izleri tespit edildi." },
-            { name: "Frame Tutarlılığı", humanProbability: 80, aiProbability: 20, explanation: "Frame'ler arasında flicker yok." },
-            { name: "Işık ve Gölge Tutarlılığı", humanProbability: 85, aiProbability: 15, explanation: "Aydınlatma tutarlı ve doğal." },
-            { name: "Hareket Akıcılığı", humanProbability: 78, aiProbability: 22, explanation: "Hareketler doğal ve akıcı." },
-            { name: "Arka Plan Stabilitesi", humanProbability: 88, aiProbability: 12, explanation: "Arka plan sabit ve tutarlı." },
-            { name: "Kenar Bozulmaları", humanProbability: 80, aiProbability: 20, explanation: "Yüz kenarlarında hafif warping." },
-            { name: "Ses Uyumu", humanProbability: 85, aiProbability: 15, explanation: "Dudak hareketi sesin uyumlu." },
-            { name: "Genel Görsel Gerçekçilik", humanProbability: 82, aiProbability: 18, explanation: "Genel olarak gerçekçi görünüyor." },
-            { name: "Detay Seviyesi", humanProbability: 76, aiProbability: 24, explanation: "Doku detayları kısmen gerçekçi." }
-          ],
-          overall: {
-            humanProbability: 81,
-            aiProbability: 19,
-            verdict: "Büyük ihtimalle gerçek",
-            summary: "Video analizi tamamlandı. Genel olarak gerçek bir insan tarafından çekilmiş görünüyor."
-          }
-        });
-        setStep("result");
+        setStep("upload");
       }
     };
     reader.readAsDataURL(uploadedFile);

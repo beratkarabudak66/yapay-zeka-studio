@@ -422,40 +422,83 @@ export const videoRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
-        const aiPrompt = `Bu video dosyasını DETAYLI analiz et. Aşağıdaki 10 kriterin her biri için insan olma ve AI olma olasılığını ayrı ayrı değerlendir:
+        // Ağırlıklı skor sistemi
+        const WEIGHTS = {
+          frameConsistency: 0.25,      // %25
+          faceRealism: 0.25,           // %25
+          motionPhysics: 0.20,         // %20
+          textureRealism: 0.15,        // %15
+          backgroundStability: 0.15,   // %15
+        };
 
-1. Yüz Tutarlılığı (Face Consistency): Yüzün şekli, oranları, simetrisi tutarlı mı?
-2. Göz/Diş/Ten Bozulmaları: Göz, diş, ten dokusunda bozulma var mı?
-3. Frame Tutarlılığı: Frame'ler arasında flicker veya bozulma var mı?
-4. Işık ve Gölge Tutarlılığı: Aydınlatma ve gölgeler tutarlı mı?
-5. Hareket Akıcılığı: Hareketler doğal ve akıcı mı?
-6. Arka Plan Stabilitesi: Arka plan sabit ve tutarlı mı?
-7. Kenar Bozulmaları: Yüz kenarlarında warping veya bozulma var mı?
-8. Ses Uyumu (Lip-sync): Varsa, dudak hareketi sesin uyumlu mu?
-9. Genel Görsel Gerçekçilik: Genel olarak görsel gerçekçi mi?
-10. Detay Seviyesi: Doku, tüy, cilt detayları gerçekçi mi?
+        const aiPrompt = `GÖREV: Bu videoyu ÇOK DETAYLI ve HASSAS analiz ederek AI vs. İnsan ayırımı yap.
 
-Her kriter için şu JSON formatını kullan:
+KRİTERLER (Her biri FARKLILASTIRILMALI - sabit skorlar YASAK):
+
+1. FRAME FLICKER & CONSISTENCY (%25 ağırlık)
+   - Frame'ler arasında renk değişimi, bozulma, flicker var mı?
+   - Temporal artifacts (zaman içinde tutarsızlık) var mı?
+   - Eğer çok flicker varsa → AI olasılığı YÜKSEK
+   - Eğer hiç flicker yoksa → İnsan olasılığı YÜKSEK
+
+2. YÜZ TUTARLILIĞI & REALISM (%25 ağırlık)
+   - Yüz şekli, oranları, simetrisi tutarlı mı?
+   - Göz, diş, ten detaylarında bozulma var mı?
+   - Yüz kenarlarında warping/distortion var mı?
+   - Eğer bozulmalar varsa → AI olasılığı YÜKSEK
+   - Eğer doğal ve tutarlıysa → İnsan olasılığı YÜKSEK
+
+3. HAREKET FİZİĞİ (%20 ağırlık)
+   - Hareketler doğal ve akıcı mı?
+   - Ani atlamalar, yapay hareketler var mı?
+   - Fizik kanunlarına uygun mu?
+   - Eğer yapay hareketler varsa → AI olasılığı YÜKSEK
+   - Eğer doğal akış varsa → İnsan olasılığı YÜKSEK
+
+4. DOKU GERÇEKÇİLİĞİ (%15 ağırlık)
+   - Cilt, tüy, göz, diş detayları gerçekçi mi?
+   - Mikro bozulmalar var mı?
+   - Doku kalitesi tutarlı mı?
+   - Eğer detaylar yapay görünüyorsa → AI olasılığı YÜKSEK
+   - Eğer doğal detaylar varsa → İnsan olasılığı YÜKSEK
+
+5. ARKA PLAN STABİLİTESİ (%15 ağırlık)
+   - Arka plan sabit ve tutarlı mı?
+   - Warping, bozulma var mı?
+   - Işık-gölge tutarlılığı var mı?
+   - Eğer bozulmalar varsa → AI olasılığı YÜKSEK
+   - Eğer stabil ve tutarlıysa → İnsan olasılığı YÜKSEK
+
+DÖNÜŞ FORMATI (JSON - KESIN):
 {
   "criteria": [
-    {"name": "Kriter Adı", "humanProbability": 0-100, "aiProbability": 0-100, "explanation": "1 cümle açıklama"},
-    ...
+    {"name": "Frame Flicker & Consistency", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.25, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
+    {"name": "Yüz Tutarlılığı & Realism", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.25, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
+    {"name": "Hareket Fiziği", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.20, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
+    {"name": "Doku Gerçekçiliği", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.15, "explanation": "Neden bu skor? Hangi bulgular gördün?"},
+    {"name": "Arka Plan Stabilitesi", "humanProbability": 0-100, "aiProbability": 0-100, "weight": 0.15, "explanation": "Neden bu skor? Hangi bulgular gördün?"}
   ],
   "overall": {
     "humanProbability": 0-100,
     "aiProbability": 0-100,
-    "verdict": "Büyük ihtimalle AI" | "Büyük ihtimalle gerçek" | "Karışık / şüpheli",
-    "summary": "Genel yorum"
+    "verdict": "Büyük ihtimalle AI" | "Büyük ihtimalle gerçek" | "Şüpheli / Karışık",
+    "summary": "Video hakkında detaylı analiz sonucu"
   }
 }
 
-ÖNEMLI: Her kriter farklı skor üretmeli, mantıklı varyasyon olmalı, "her video iyi" gibi default cevap VERME!`;
+ÖNEMLİ KURALLAR:
+1. SABIT SKORLAR VERME - her video farklı olmalı
+2. "Her video iyi" biası KALDIR
+3. Aşırı yapay görünen videoyu "gerçek" deme
+4. Doğal görünen videoyu "AI" deme
+5. Skorlar video kalitesine ve bulgulara göre değişmeli
+6. humanProbability + aiProbability = 100 olabilir veya olmayabilir (belirsizlik var)`;
 
         const response = await invokeLLM({
           messages: [
             {
               role: "system",
-              content: "Video analiz uzmanısın. Videoların yapay zeka ile üretilmiş mi yoksa gerçek mi olduğunu belirle.",
+              content: "Sen profesyonel bir deepfake ve AI video analiz uzmanısın. Videoların yapay zeka ile üretilmiş mi yoksa gerçek mi olduğunu çok hassas ve detaylı analiz ederek belirlersin. Her video için farklı, mantıklı sonuçlar üretirsin. Sabit cevaplar vermezsin. Videodaki gerçek bozulmaları ve detayları göz önüne alarak skor ver. Aşırı yapay görünen videoyu gerçek deme, doğal görünen videoyu AI deme.",
             },
             {
               role: "user",
@@ -474,6 +517,48 @@ Her kriter için şu JSON formatını kullan:
               ],
             },
           ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "video_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  criteria: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        humanProbability: { type: "number", minimum: 0, maximum: 100 },
+                        aiProbability: { type: "number", minimum: 0, maximum: 100 },
+                        weight: { type: "number", minimum: 0, maximum: 1 },
+                        explanation: { type: "string" },
+                      },
+                      required: ["name", "humanProbability", "aiProbability", "weight", "explanation"],
+                      additionalProperties: false,
+                    },
+                    minItems: 5,
+                    maxItems: 5,
+                  },
+                  overall: {
+                    type: "object",
+                    properties: {
+                      humanProbability: { type: "number", minimum: 0, maximum: 100 },
+                      aiProbability: { type: "number", minimum: 0, maximum: 100 },
+                      verdict: { type: "string", enum: ["Büyük ihtimalle AI", "Büyük ihtimalle gerçek", "Şüpheli / Karışık"] },
+                      summary: { type: "string" },
+                    },
+                    required: ["humanProbability", "aiProbability", "verdict", "summary"],
+                    additionalProperties: false,
+                  },
+                },
+                required: ["criteria", "overall"],
+                additionalProperties: false,
+              },
+            },
+          },
         });
 
         // Parse response
@@ -483,55 +568,61 @@ Her kriter için şu JSON formatını kullan:
           analysisContent = typeof content === 'string' ? content : JSON.stringify(content);
         }
 
-        // Fallback analysis
-        let analysis;
-        if (analysisContent) {
-          try {
-            analysis = JSON.parse(analysisContent);
-          } catch {
-            analysis = {
-              criteria: [
-                { name: "Yüz Tutarlılığı", humanProbability: 82, aiProbability: 18, explanation: "Yüz şekli ve oranları tutarlı görünüyor." },
-                { name: "Göz/Diş/Ten Bozulmaları", humanProbability: 75, aiProbability: 25, explanation: "Hafif bozulma izleri tespit edildi." },
-                { name: "Frame Tutarlılığı", humanProbability: 80, aiProbability: 20, explanation: "Frame'ler arasında flicker yok." },
-                { name: "Işık ve Gölge Tutarlılığı", humanProbability: 85, aiProbability: 15, explanation: "Aydınlatma tutarlı ve doğal." },
-                { name: "Hareket Akıcılığı", humanProbability: 78, aiProbability: 22, explanation: "Hareketler doğal ve akıcı." },
-                { name: "Arka Plan Stabilitesi", humanProbability: 88, aiProbability: 12, explanation: "Arka plan sabit ve tutarlı." },
-                { name: "Kenar Bozulmaları", humanProbability: 80, aiProbability: 20, explanation: "Yüz kenarlarında hafif warping." },
-                { name: "Ses Uyumu", humanProbability: 85, aiProbability: 15, explanation: "Dudak hareketi sesin uyumlu." },
-                { name: "Genel Görsel Gerçekçilik", humanProbability: 82, aiProbability: 18, explanation: "Genel olarak gerçekçi görünüyor." },
-                { name: "Detay Seviyesi", humanProbability: 76, aiProbability: 24, explanation: "Doku detayları kısmen gerçekçi." }
-              ],
-              overall: {
-                humanProbability: 81,
-                aiProbability: 19,
-                verdict: "Büyük ihtimalle gerçek",
-                summary: "Video analizi tamamlandı. Genel olarak gerçek bir insan tarafından çekilmiş görünüyor."
-              }
-            };
-          }
-        } else {
-          analysis = {
-            criteria: [
-              { name: "Yüz Tutarlılığı", humanProbability: 82, aiProbability: 18, explanation: "Yüz şekli ve oranları tutarlı görünüyor." },
-              { name: "Göz/Diş/Ten Bozulmaları", humanProbability: 75, aiProbability: 25, explanation: "Hafif bozulma izleri tespit edildi." },
-              { name: "Frame Tutarlılığı", humanProbability: 80, aiProbability: 20, explanation: "Frame'ler arasında flicker yok." },
-              { name: "Işık ve Gölge Tutarlılığı", humanProbability: 85, aiProbability: 15, explanation: "Aydınlatma tutarlı ve doğal." },
-              { name: "Hareket Akıcılığı", humanProbability: 78, aiProbability: 22, explanation: "Hareketler doğal ve akıcı." },
-              { name: "Arka Plan Stabilitesi", humanProbability: 88, aiProbability: 12, explanation: "Arka plan sabit ve tutarlı." },
-              { name: "Kenar Bozulmaları", humanProbability: 80, aiProbability: 20, explanation: "Yüz kenarlarında hafif warping." },
-              { name: "Ses Uyumu", humanProbability: 85, aiProbability: 15, explanation: "Dudak hareketi sesin uyumlu." },
-              { name: "Genel Görsel Gerçekçilik", humanProbability: 82, aiProbability: 18, explanation: "Genel olarak gerçekçi görünüyor." },
-              { name: "Detay Seviyesi", humanProbability: 76, aiProbability: 24, explanation: "Doku detayları kısmen gerçekçi." }
-            ],
-            overall: {
-              humanProbability: 81,
-              aiProbability: 19,
-              verdict: "Büyük ihtimalle gerçek",
-              summary: "Video analizi tamamlandı. Genel olarak gerçek bir insan tarafından çekilmiş görünüyor."
-            }
-          };
+        if (!analysisContent) {
+          throw new Error("LLM returned empty response");
         }
+
+        // Parse JSON - no fallback, strict mode
+        let analysis;
+        try {
+          analysis = JSON.parse(analysisContent);
+        } catch (parseError) {
+          throw new Error(`Failed to parse LLM response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        }
+
+        // Validate structure
+        if (!analysis.criteria || !Array.isArray(analysis.criteria) || analysis.criteria.length !== 5) {
+          throw new Error("Invalid criteria array in response");
+        }
+
+        if (!analysis.overall || typeof analysis.overall !== "object") {
+          throw new Error("Invalid overall object in response");
+        }
+
+        // Calculate weighted score
+        let weightedAI = 0;
+        let weightedHuman = 0;
+
+        for (const criterion of analysis.criteria) {
+          const weight = criterion.weight || 0;
+          weightedAI += (criterion.aiProbability || 0) * weight;
+          weightedHuman += (criterion.humanProbability || 0) * weight;
+        }
+
+        // Normalize to 0-100
+        const finalAIProbability = Math.round(weightedAI);
+        const finalHumanProbability = Math.round(weightedHuman);
+
+        // Determine verdict based on final score
+        let verdict = analysis.overall.verdict;
+        if (finalAIProbability > 70) {
+          verdict = "Büyük ihtimalle AI";
+        } else if (finalAIProbability < 30) {
+          verdict = "Büyük ihtimalle gerçek";
+        } else {
+          verdict = "Şüpheli / Karışık";
+        }
+
+        // Build final response
+        const finalAnalysis = {
+          criteria: analysis.criteria,
+          overall: {
+            humanProbability: finalHumanProbability,
+            aiProbability: finalAIProbability,
+            verdict,
+            summary: analysis.overall.summary,
+          },
+        };
 
         if (ctx.user) {
           await createOutput({
@@ -543,7 +634,7 @@ Her kriter için şu JSON formatını kullan:
           });
         }
 
-        return analysis;
+        return finalAnalysis;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
