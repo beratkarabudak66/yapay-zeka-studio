@@ -1,56 +1,64 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { trpc } from "@/lib/trpc";
-import { Mail, MessageSquare, Calendar, Trash2, CheckCircle, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { Mail, MessageSquare, Calendar, Trash2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+type Feedback = {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  created_at: string;
+};
 
 export default function AdminDashboard() {
-  const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const [selectedFeedback, setSelectedFeedback] = useState<number | null>(null);
+  const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const feedbacksQuery = trpc.feedback.getAll.useQuery(undefined, {
-    enabled: user?.role === "admin",
+  const { data: feedbacks = [], isLoading } = useQuery<Feedback[]>({
+    queryKey: ["feedbacks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("feedbacks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
-  const deleteMutation = trpc.feedback.delete.useMutation({
-    onSuccess: () => {
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const { error } = await supabase.from("feedbacks").delete().eq("id", id);
+      if (error) throw error;
       toast.success("Geri bildirim silindi");
-      feedbacksQuery.refetch();
-    },
-    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["feedbacks"] });
+    } catch {
       toast.error("Silme işlemi başarısız oldu");
-    },
-  });
-
-  // Yetki kontrolü
-  useEffect(() => {
-    if (!loading && (!user || user.role !== "admin")) {
-      setLocation("/");
-      toast.error("Bu sayfaya erişim yetkiniz yok");
+    } finally {
+      setDeletingId(null);
     }
-  }, [user, loading, setLocation]);
+  };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          <p className="mt-4 text-muted-foreground">Yükleniyor...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Yükleniyor...</p>
         </div>
       </div>
     );
   }
-
-  if (!user || user.role !== "admin") {
-    return null;
-  }
-
-  const feedbacks = feedbacksQuery.data || [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -92,7 +100,7 @@ export default function AdminDashboard() {
                   <p className="text-sm text-muted-foreground mb-1">Bu Ay</p>
                   <p className="text-3xl font-bold text-foreground">
                     {feedbacks.filter((f) => {
-                      const date = new Date(f.createdAt);
+                      const date = new Date(f.created_at);
                       const now = new Date();
                       return (
                         date.getMonth() === now.getMonth() &&
@@ -128,7 +136,7 @@ export default function AdminDashboard() {
           {feedbacks.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                <AlertCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
                 <p className="text-muted-foreground">Henüz geri bildirim yok</p>
               </CardContent>
             </Card>
@@ -149,7 +157,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-foreground">{feedback.subject}</h3>
                         <Badge variant="secondary" className="text-xs">
-                          {new Date(feedback.createdAt).toLocaleDateString("tr-TR")}
+                          {new Date(feedback.created_at).toLocaleDateString("tr-TR")}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -162,11 +170,15 @@ export default function AdminDashboard() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteMutation.mutate({ id: feedback.id });
+                        handleDelete(feedback.id);
                       }}
-                      disabled={deleteMutation.isPending}
+                      disabled={deletingId === feedback.id}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      {deletingId === feedback.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      )}
                     </Button>
                   </div>
                 </CardHeader>
@@ -186,7 +198,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground pt-4 border-t border-border">
                         <Calendar className="w-4 h-4" />
-                        {new Date(feedback.createdAt).toLocaleString("tr-TR")}
+                        {new Date(feedback.created_at).toLocaleString("tr-TR")}
                       </div>
                     </div>
                   </CardContent>

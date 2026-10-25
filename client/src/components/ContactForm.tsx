@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Mail, Send, CheckCircle, Loader } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export default function ContactForm() {
@@ -14,10 +14,8 @@ export default function ContactForm() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submitMutation = trpc.feedback.submit.useMutation();
-
-  // Giriş animasyonu için
   useEffect(() => {
     setIsVisible(true);
   }, []);
@@ -38,8 +36,17 @@ export default function ContactForm() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      await submitMutation.mutateAsync(formData);
+      const { error } = await supabase.from("feedbacks").insert({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+      });
+
+      if (error) throw error;
+
       setIsSubmitted(true);
       setFormData({ name: "", email: "", subject: "", message: "" });
 
@@ -49,6 +56,8 @@ export default function ContactForm() {
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error("Geri bildirim gönderme sırasında bir hata oluştu");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -207,11 +216,11 @@ export default function ContactForm() {
                 >
                   <Button
                     type="submit"
-                    disabled={submitMutation.isPending}
+                    disabled={isSubmitting}
                     className="w-full h-11 text-base gap-2 transition-all duration-300 hover:shadow-lg hover:shadow-primary/25"
                     size="lg"
                   >
-                    {submitMutation.isPending ? (
+                    {isSubmitting ? (
                       <>
                         <Loader className="w-4 h-4 animate-spin" />
                         <span className="inline-block">Gönderiliyor</span>

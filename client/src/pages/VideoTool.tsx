@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import type { ChangeEvent } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +14,12 @@ import {
   Lightbulb,
   Download,
   CheckCircle2,
-  Play,
   Subtitles,
   Sparkles,
-  ExternalLink,
+  Play,
+  Eye,
 } from "lucide-react";
+import { addHistoryItem } from "@/lib/history";
 
 type VideoAnalysis = {
   summary: string;
@@ -27,6 +27,13 @@ type VideoAnalysis = {
   suggestedEnhancements: string[];
   subtitleLines: Array<{ time: string; text: string }>;
   contentType: string;
+  metrics: {
+    duration: string;
+    resolution: string;
+    aspectRatio: string;
+    frameRate: string;
+    fileSize: string;
+  };
 };
 
 type VideoResult = {
@@ -36,153 +43,176 @@ type VideoResult = {
 
 type Step = "upload" | "preview" | "result";
 
-type AITool = {
-  name: string;
-  description: string;
-  url: string;
-  icon: string;
-};
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
 
-const videoAITools: AITool[] = [
-  {
-    name: "Runway ML",
-    description: "AI video editing, generation, and enhancement",
-    url: "https://runwayml.com",
-    icon: "🎬",
-  },
-  {
-    name: "Topaz Video AI",
-    description: "Video upscaling and enhancement",
-    url: "https://www.topazlabs.com/topaz-video-ai",
-    icon: "✨",
-  },
-  {
-    name: "Adobe Firefly",
-    description: "Generative AI for video content",
-    url: "https://www.adobe.com/products/firefly.html",
-    icon: "🔥",
-  },
-  {
-    name: "HeyGen",
-    description: "AI video generation and avatars",
-    url: "https://www.heygen.com",
-    icon: "🎥",
-  },
-  {
-    name: "Synthesia",
-    description: "AI video creation platform",
-    url: "https://www.synthesia.io",
-    icon: "🤖",
-  },
-  {
-    name: "Descript",
-    description: "Video editing with AI transcription",
-    url: "https://www.descript.com",
-    icon: "📝",
-  },
-];
+function analyzeVideo(file: File, videoEl: HTMLVideoElement): VideoResult {
+  const duration = videoEl.duration;
+  const videoWidth = videoEl.videoWidth;
+  const videoHeight = videoEl.videoHeight;
+  const aspectRatio = videoWidth && videoHeight ? (videoWidth / videoHeight).toFixed(2) : "Bilinmiyor";
+
+  const metrics = {
+    duration: formatTime(duration),
+    resolution: videoWidth && videoHeight ? `${videoWidth}×${videoHeight}` : "Bilinmiyor",
+    aspectRatio: `${aspectRatio}:1`,
+    frameRate: "~30fps",
+    fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+  };
+
+  // Determine content type from resolution
+  let contentType = "Standart Video";
+  if (videoWidth >= 3840) contentType = "4K Ultra HD Video";
+  else if (videoWidth >= 1920) contentType = "Full HD Video";
+  else if (videoWidth >= 1280) contentType = "HD Video";
+  else if (videoWidth >= 720) contentType = "Düşük Çözünürlüklü Video";
+
+  // Suggested enhancements based on metrics
+  const enhancements: string[] = [];
+  if (videoWidth && videoWidth < 1280) {
+    enhancements.push("Çözünürlük düşük — 1080p'ye yükseltmek için Topaz Video AI kullanın");
+  }
+  if (file.size / duration > 5 * 1024 * 1024) {
+    enhancements.push("Dosya boyutu yüksek — sıkıştırma ile kaliteyi koruyarak boyutu azaltın");
+  }
+  if (duration > 120) {
+    enhancements.push("Video uzun — izleyici dikkatini artırmak için kısa klipler halinde bölün");
+  }
+  enhancements.push("Ses kalitesini iyileştirmek için Adobe Podcast kullanın");
+  enhancements.push("Erişilebilirlik için altyazı ekleyin (aşağıdaki altyazı şablonunu kullanın)");
+  if (aspectRatio !== "1.78:1" && aspectRatio !== "0.56:1") {
+    enhancements.push(`En-boy oranı ${aspectRatio}:1 — sosyal medya için 16:9 veya 9:16 kullanın`);
+  }
+
+  // Topics based on file name
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+  const topics = baseName
+    .split(/[-_\s]+/)
+    .filter((w) => w.length > 2)
+    .slice(0, 5)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  if (topics.length === 0) topics.push("Genel Video");
+
+  // Subtitle lines — template based on duration
+  const subtitleLines: Array<{ time: string; text: string }> = [];
+  const segmentCount = Math.min(6, Math.max(2, Math.ceil(duration / 15)));
+  const segmentDuration = duration / segmentCount;
+  for (let i = 0; i < segmentCount; i++) {
+    const start = i * segmentDuration;
+    subtitleLines.push({
+      time: formatTime(start),
+      text: i === 0 ? "[Video başlangıcı — buraya altyazı metni girin]" : `[${formatTime(start)} anı — altyazı metni]`,
+    });
+  }
+
+  const summary = `${contentType} (${metrics.resolution}, ${metrics.duration}). ${topics.join(", ")} konulu video. ${enhancements.length} kalite önerisi mevcut.`;
+
+  // Transcription placeholder
+  const transcription = `[Bu video ${metrics.duration} uzunluğunda, ${metrics.resolution} çözünürlükte. Video içeriğinin transkripsiyonu için ses tanıma aracı (örn. Descript) kullanabilirsiniz. Dosya adı: ${file.name}]`;
+
+  return {
+    transcription,
+    analysis: {
+      summary,
+      topics,
+      suggestedEnhancements: enhancements,
+      subtitleLines,
+      contentType,
+      metrics,
+    },
+  };
+}
 
 export default function VideoTool() {
   const [step, setStep] = useState<Step>("upload");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [result, setResult] = useState<VideoResult | null>(null);
-  const [activeTab, setActiveTab] = useState<"transcript" | "enhancements" | "subtitles">(
-    "enhancements"
-  );
+  const [activeTab, setActiveTab] = useState<"transcript" | "enhancements" | "subtitles">("enhancements");
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const uploadMutation = trpc.upload.getUploadUrl.useMutation({
-    onSuccess: (data) => {
-      setUploadedUrl(data.url);
-      setStep("preview");
-      toast.success("Video yüklendi! Öneriler için analiz başlatabilirsiniz.");
-    },
-    onError: (err) => toast.error("Yükleme hatası: " + err.message),
-  });
-
-  const analyzeMutation = trpc.video.analyze.useMutation({
-    onSuccess: (data) => {
-      setResult(data);
-      setStep("result");
-      toast.success("Video analizi tamamlandı!");
-    },
-    onError: (err) => toast.error("Analiz hatası: " + err.message),
-  });
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 16 * 1024 * 1024) {
-      toast.error("Dosya boyutu 16MB'ı geçemez.");
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Dosya boyutu 50MB'ı geçemez.");
       return;
     }
 
     setUploadedFile(file);
     setResult(null);
-    setStep("upload");
-
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const base64 = (ev.target?.result as string).split(",")[1];
-      if (!base64) return;
-      uploadMutation.mutate({
-        fileName: file.name,
-        fileType: file.type,
-        toolType: "video",
-        fileBase64: base64,
-      });
-    };
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
+    setStep("preview");
+    toast.info("Video yüklendi. Analiz için butona tıklayın.");
   };
 
   const handleAnalyze = () => {
-    if (!uploadedUrl) {
+    if (!uploadedFile || !videoRef.current) {
       toast.error("Önce bir video yükleyin.");
       return;
     }
-    analyzeMutation.mutate({ videoUrl: uploadedUrl });
+
+    setIsLoading(true);
+    // Wait for video metadata to be loaded
+    const video = videoRef.current;
+    const doAnalyze = () => {
+      setTimeout(() => {
+        try {
+          const analysisResult = analyzeVideo(uploadedFile, video);
+          setResult(analysisResult);
+          setStep("result");
+          addHistoryItem({
+            toolType: "video",
+            outputUrl: videoUrl || undefined,
+            metadata: JSON.stringify({
+              summary: analysisResult.analysis.summary,
+              topics: analysisResult.analysis.topics,
+              contentType: analysisResult.analysis.contentType,
+            }),
+          });
+          setIsLoading(false);
+          toast.success("Video analizi tamamlandı!");
+        } catch (err) {
+          console.error(err);
+          toast.error("Analiz sırasında hata oluştu");
+          setIsLoading(false);
+        }
+      }, 300);
+    };
+
+    if (video.readyState >= 1) {
+      doAnalyze();
+    } else {
+      video.onloadedmetadata = doAnalyze;
+    }
   };
 
-  const handleCompressVideo = () => {
-    if (!uploadedFile) {
-      toast.error("Önce bir video yükleyin.");
-      return;
-    }
-    
-    try {
-      const originalSize = (uploadedFile.size / 1024 / 1024).toFixed(2);
-      
-      // Video dosyasını doğrudan indir
-      const url = URL.createObjectURL(uploadedFile);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = uploadedFile.name || 'video.mp4';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // URL'yi temizle
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-      }, 100);
-      
-      toast.success(`Video indirildi! Boyut: ${originalSize}MB`);
-    } catch (error) {
-      console.error('Video indirme hatası:', error);
-      toast.error("Video indirilirken hata oluştu");
-    }
+  const handleDownloadVideo = () => {
+    if (!uploadedFile) return;
+    const url = URL.createObjectURL(uploadedFile);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = uploadedFile.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    toast.success("Video indirildi!");
   };
 
   const downloadSubtitles = () => {
     if (!result?.analysis.subtitleLines) return;
-
     let srtContent = "";
     result.analysis.subtitleLines.forEach((line, index) => {
-      srtContent += `${index + 1}\n${line.time} --> ${line.time}\n${line.text}\n\n`;
+      const startTime = line.time;
+      const nextTime = result.analysis.subtitleLines[index + 1]?.time || "00:00:00,000";
+      srtContent += `${index + 1}\n${startTime},000 --> ${nextTime},000\n${line.text}\n\n`;
     });
-
     const blob = new Blob([srtContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -193,144 +223,91 @@ export default function VideoTool() {
     toast.success("Altyazı indirildi!");
   };
 
-  const isLoading = uploadMutation.isPending || analyzeMutation.isPending;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-white via-orange-50/30 to-white py-12 px-4">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Video className="w-8 h-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Video İyileştirici</h1>
+            <Video className="w-8 h-8 text-orange-600" />
+            <h1 className="text-4xl font-bold text-gray-900">Video Aracı</h1>
           </div>
           <p className="text-gray-600 text-lg">
-            Videolarınızı AI ile analiz edin, kalite önerileri alın ve altyazı oluşturun
+            Videoyu analiz edin, kalite önerileri alın ve altyazı şablonu oluşturun
           </p>
         </div>
 
-        {/* Main Content */}
+        {/* Upload Step */}
         {step === "upload" && (
-          <div className="space-y-8">
-            {/* Upload Area */}
-            <Card className="border-2 border-dashed border-blue-300 bg-blue-50">
-              <CardContent className="pt-12 pb-12">
-                <div className="text-center space-y-6">
-                  <div className="flex justify-center">
-                    <FileVideo className="w-16 h-16 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      Video Dosyası Yükleyin
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      MP4, WebM veya diğer video formatları (Max 16MB)
-                    </p>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="video/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <Button
-                    onClick={() => fileInputRef.current?.click()}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Yükleniyor...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Dosya Seç
-                      </>
-                    )}
-                  </Button>
-                  {uploadedFile && (
-                    <div className="mt-4 p-3 bg-green-100 rounded-lg">
-                      <p className="text-green-800 text-sm">
-                        ✓ {uploadedFile.name} seçildi
-                      </p>
-                    </div>
-                  )}
+          <Card className="border-2 border-dashed border-orange-300 bg-orange-50/30">
+            <CardContent className="pt-12 pb-12">
+              <div className="text-center space-y-6">
+                <div className="flex justify-center">
+                  <FileVideo className="w-16 h-16 text-orange-400" />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Tools Section */}
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Video İyileştirme Araçları
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {videoAITools.map((tool) => (
-                  <Card
-                    key={tool.name}
-                    className="hover:shadow-lg transition-shadow cursor-pointer border-gray-200"
-                  >
-                    <CardContent className="pt-6">
-                      <div className="text-center space-y-4">
-                        <div className="text-4xl">{tool.icon}</div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{tool.name}</h3>
-                          <p className="text-sm text-gray-600 mt-2">{tool.description}</p>
-                        </div>
-                        <a
-                          href={tool.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          Ziyaret Et <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Video Dosyası Yükleyin
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    MP4, WebM veya diğer video formatları (Max 50MB)
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  size="lg"
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-8 gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Dosya Seç
+                </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        {step === "preview" && uploadedUrl && (
-          <div className="space-y-8">
-            <Card className="border-blue-200 bg-blue-50">
+        {/* Preview Step */}
+        {step === "preview" && videoUrl && (
+          <div className="space-y-6">
+            <Card className="overflow-hidden">
+              <div className="bg-black flex items-center justify-center">
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  controls
+                  className="max-h-[400px] w-full"
+                />
+              </div>
+            </Card>
+
+            <Card className="border-orange-200 bg-orange-50/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Lightbulb className="w-5 h-5 text-yellow-500" />
-                  Analiz Önerileri
+                  Analiz
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Kalite Önerileri:</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-gray-700">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Parlaklık ve kontrast analizi yapılacak</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-gray-700">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Stabilizasyon gerekliliği kontrol edilecek</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-gray-700">
-                      <span className="text-blue-600 mt-1">•</span>
-                      <span>Ses kalitesi değerlendirilecek</span>
-                    </li>
-                  </ul>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <FileVideo className="w-4 h-4" />
+                  <span>{uploadedFile?.name}</span>
+                  <Badge variant="outline">
+                    {(uploadedFile ? uploadedFile.size / 1024 / 1024 : 0).toFixed(2)} MB
+                  </Badge>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-4">
                   <Button
                     onClick={handleAnalyze}
                     size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-orange-600 hover:bg-orange-700 gap-2"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -346,13 +323,13 @@ export default function VideoTool() {
                     )}
                   </Button>
                   <Button
-                    onClick={handleCompressVideo}
+                    onClick={handleDownloadVideo}
                     size="lg"
-                    className="bg-green-600 hover:bg-green-700"
-                    disabled={isLoading}
+                    variant="outline"
+                    className="gap-2"
                   >
-                    <FileVideo className="w-4 h-4 mr-2" />
-                    Videoyu Sıkıştır
+                    <Download className="w-4 h-4 mr-2" />
+                    Videoyu İndir
                   </Button>
                 </div>
               </CardContent>
@@ -360,8 +337,9 @@ export default function VideoTool() {
           </div>
         )}
 
+        {/* Result Step */}
         {step === "result" && result && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <Card className="border-green-200 bg-green-50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-green-700">
@@ -371,6 +349,18 @@ export default function VideoTool() {
               </CardHeader>
             </Card>
 
+            {/* Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {Object.entries(result.analysis.metrics).map(([key, value]) => (
+                <Card key={key} className="text-center">
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground capitalize">{key}</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">{value}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
             {/* Tabs */}
             <div className="flex gap-2 border-b border-gray-200">
               {(["transcript", "enhancements", "subtitles"] as const).map((tab) => (
@@ -379,7 +369,7 @@ export default function VideoTool() {
                   onClick={() => setActiveTab(tab)}
                   className={`px-4 py-2 font-medium border-b-2 transition-colors ${
                     activeTab === tab
-                      ? "border-blue-600 text-blue-600"
+                      ? "border-orange-600 text-orange-600"
                       : "border-transparent text-gray-600 hover:text-gray-900"
                   }`}
                 >
@@ -390,7 +380,6 @@ export default function VideoTool() {
               ))}
             </div>
 
-            {/* Tab Content */}
             {activeTab === "transcript" && (
               <Card>
                 <CardHeader>
@@ -399,9 +388,16 @@ export default function VideoTool() {
                     Video Transkripsiyon
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent>
                   <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
                     <p className="text-gray-700 whitespace-pre-wrap">{result.transcription}</p>
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <Eye className="w-4 h-4 inline mr-1" />
+                      Sesli transkripsiyon için "Ses Aracı"nı kullanarak videonun sesini
+                      kaydedebilir veya Descript gibi araçlarla transkripsiyon alabilirsiniz.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -452,22 +448,43 @@ export default function VideoTool() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Subtitles className="w-5 h-5" />
-                    Altyazılar
+                    Altyazı Şablonu
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto space-y-3">
                     {result.analysis.subtitleLines.map((line, idx) => (
-                      <div key={idx} className="border-l-4 border-blue-500 pl-3">
+                      <div key={idx} className="border-l-4 border-orange-500 pl-3">
                         <p className="text-sm text-gray-500">{line.time}</p>
                         <p className="text-gray-800">{line.text}</p>
                       </div>
                     ))}
                   </div>
-
+                  <Button
+                    onClick={downloadSubtitles}
+                    className="w-full bg-orange-600 hover:bg-orange-700 gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    SRT Olarak İndir
+                  </Button>
                 </CardContent>
               </Card>
             )}
+
+            <Button
+              onClick={() => {
+                setStep("upload");
+                setUploadedFile(null);
+                setResult(null);
+                if (videoUrl) URL.revokeObjectURL(videoUrl);
+                setVideoUrl(null);
+              }}
+              variant="outline"
+              className="w-full gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Başka Video Yükle
+            </Button>
           </div>
         )}
       </div>

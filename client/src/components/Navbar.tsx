@@ -1,5 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { useHasHistory } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import {
@@ -9,8 +8,6 @@ import {
   Video,
   Code2,
   Sparkles,
-  LogOut,
-  LogIn,
   Menu,
   X,
   History,
@@ -18,7 +15,6 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const tools = [
   { label: "Sunum", href: "/presentation", icon: Presentation, color: "text-blue-600" },
@@ -30,9 +26,9 @@ const tools = [
 ];
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hasHistory = useHasHistory();
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-border shadow-sm">
@@ -71,8 +67,8 @@ export default function Navbar() {
           </nav>
 
           {/* History & Admin Links */}
-          {isAuthenticated && user && (
-            <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1">
+            {hasHistory && (
               <Link href="/history">
                 <button
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -85,64 +81,29 @@ export default function Navbar() {
                   Geçmiş
                 </button>
               </Link>
-              {user.role === "admin" && (
-                <Link href="/admin/feedbacks">
-                  <button
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      location === "/admin/feedbacks"
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin
-                  </button>
-                </Link>
-              )}
-            </div>
-          )}
-
-          {/* Auth */}
-          <div className="flex items-center gap-2">
-            {isAuthenticated && user ? (
-              <div className="flex items-center gap-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                    {user.name?.charAt(0)?.toUpperCase() ?? "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:block text-sm font-medium text-foreground max-w-[120px] truncate">
-                  {user.name}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => logout()}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => (window.location.href = getLoginUrl())}
-                className="gap-2"
-              >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Giriş Yap</span>
-              </Button>
             )}
-
-            {/* Mobile menu toggle */}
-            <button
-              className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menü"
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            <Link href="/admin/feedbacks">
+              <button
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  location === "/admin/feedbacks"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </button>
+            </Link>
           </div>
+
+          {/* Mobile menu toggle */}
+          <button
+            className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Menü"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
@@ -169,6 +130,34 @@ export default function Navbar() {
                 </Link>
               );
             })}
+            {hasHistory && (
+              <Link href="/history">
+                <button
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    location === "/history"
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <History className="w-5 h-5" />
+                  Geçmiş
+                </button>
+              </Link>
+            )}
+            <Link href="/admin/feedbacks">
+              <button
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  location === "/admin/feedbacks"
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted"
+                }`}
+                onClick={() => setMobileOpen(false)}
+              >
+                <Shield className="w-5 h-5" />
+                Admin
+              </button>
+            </Link>
           </div>
         </div>
       )}

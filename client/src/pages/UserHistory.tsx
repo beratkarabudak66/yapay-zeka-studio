@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { trpc } from "@/lib/trpc";
-import { Output } from "@/../../drizzle/schema";
 import {
   FileText,
   Image,
@@ -16,11 +13,11 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-
-type ToolType = "presentation" | "logo" | "voice" | "video" | "coding" | "video-test";
+import { getHistory, deleteHistoryItem, clearHistory, type HistoryItem, type ToolType } from "@/lib/history";
 
 const toolIcons: Record<ToolType, React.ReactNode> = {
   presentation: <FileText className="w-5 h-5" />,
@@ -28,7 +25,7 @@ const toolIcons: Record<ToolType, React.ReactNode> = {
   voice: <Mic className="w-5 h-5" />,
   video: <Video className="w-5 h-5" />,
   coding: <Code className="w-5 h-5" />,
-  "video-test": <Eye className="w-5 h-5" />,
+  "ai-video-test": <Eye className="w-5 h-5" />,
 };
 
 const toolNames: Record<ToolType, string> = {
@@ -37,7 +34,7 @@ const toolNames: Record<ToolType, string> = {
   voice: "Ses",
   video: "Video",
   coding: "Kodlama",
-  "video-test": "Video Test",
+  "ai-video-test": "AI Video Test",
 };
 
 const toolColors: Record<ToolType, string> = {
@@ -46,59 +43,42 @@ const toolColors: Record<ToolType, string> = {
   voice: "bg-green-100 text-green-700",
   video: "bg-red-100 text-red-700",
   coding: "bg-orange-100 text-orange-700",
-  "video-test": "bg-pink-100 text-pink-700",
+  "ai-video-test": "bg-pink-100 text-pink-700",
 };
 
 export default function UserHistory() {
-  const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const [selectedOutput, setSelectedOutput] = useState<number | null>(null);
+  const [selectedOutput, setSelectedOutput] = useState<string | null>(null);
+  const [items, setItems] = useState<HistoryItem[]>(getHistory());
 
-  const outputsQuery = trpc.outputs.getUserOutputs.useQuery(undefined, {
-    enabled: !!user,
-  });
+  const handleDelete = (id: string) => {
+    deleteHistoryItem(id);
+    setItems(getHistory());
+    toast.success("Çıktı silindi");
+  };
 
-  // Yetki kontrolü
-  useEffect(() => {
-    if (!loading && !user) {
-      setLocation("/");
-      toast.error("Bu sayfaya erişmek için giriş yapmalısınız");
-    }
-  }, [user, loading, setLocation]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          <p className="mt-4 text-muted-foreground">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  const outputs = outputsQuery.data || [];
+  const handleClearAll = () => {
+    clearHistory();
+    setItems([]);
+    toast.success("Geçmiş temizlendi");
+  };
 
   // Araçlara göre grupla
-  const groupedByTool: Record<ToolType, Output[]> = outputs.reduce(
-    (acc: Record<ToolType, Output[]>, output: Output) => {
-      const tool = output.toolType as ToolType;
+  const groupedByTool = items.reduce(
+    (acc: Record<ToolType, HistoryItem[]>, item: HistoryItem) => {
+      const tool = item.toolType as ToolType;
       if (!acc[tool]) acc[tool] = [];
-      acc[tool].push(output);
+      acc[tool].push(item);
       return acc;
     },
-    {} as Record<ToolType, Output[]>
+    {} as Record<ToolType, HistoryItem[]>
   );
 
-  const handleDownload = (output: Output) => {
-    if (output.outputUrl) {
+  const handleDownload = (item: HistoryItem) => {
+    if (item.outputUrl) {
       const link = document.createElement("a");
-      link.href = output.outputUrl;
-      link.download = `${output.toolType}-${output.id}`;
+      link.href = item.outputUrl;
+      link.download = `${item.toolType}-${item.id}`;
       link.click();
       toast.success("İndirme başladı");
     } else {
@@ -106,7 +86,7 @@ export default function UserHistory() {
     }
   };
 
-  const renderMetadata = (metadata: string | null, toolType: ToolType): React.ReactNode => {
+  const renderMetadata = (metadata: string | undefined, toolType: ToolType): React.ReactNode => {
     if (!metadata) return null;
 
     try {
@@ -143,11 +123,6 @@ export default function UserHistory() {
             <p className="text-sm font-medium text-foreground">
               Transkripsiyon: {data.transcription?.substring(0, 50)}...
             </p>
-            {data.analysis && (
-              <p className="text-sm text-muted-foreground">
-                Ton: {data.analysis.tone}
-              </p>
-            )}
           </div>
         );
       }
@@ -178,14 +153,14 @@ export default function UserHistory() {
         );
       }
 
-      if (toolType === "video-test") {
+      if (toolType === "ai-video-test") {
         return (
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">
-              Sonuç: {data.isAI ? "Yapay Zeka" : "İnsan"}
+              Sonuç: {data.overall?.verdict || "Bilinmiyor"}
             </p>
             <p className="text-sm text-muted-foreground">
-              Güven: {data.confidence ? `${Math.round(data.confidence * 100)}%` : "Yok"}
+              AI Olasılığı: {data.overall?.aiProbability != null ? `%${data.overall.aiProbability}` : "Yok"}
             </p>
           </div>
         );
@@ -209,16 +184,24 @@ export default function UserHistory() {
                 Tüm araçlarınızdan oluşturulan çıktıları görüntüleyin
               </p>
             </div>
-            <Button variant="outline" onClick={() => setLocation("/")}>
-              Ana Sayfa
-            </Button>
+            <div className="flex gap-2">
+              {items.length > 0 && (
+                <Button variant="outline" onClick={handleClearAll} className="gap-2">
+                  <Trash2 className="w-4 h-4" />
+                  Tümünü Temizle
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => setLocation("/")}>
+                Ana Sayfa
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="container py-12">
-        {outputs.length === 0 ? (
+        {items.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <AlertCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
@@ -232,7 +215,7 @@ export default function UserHistory() {
           </Card>
         ) : (
           <div className="space-y-8">
-            {(Object.entries(groupedByTool) as [ToolType, Output[]][]).map(([tool, toolOutputs]) => (
+            {(Object.entries(groupedByTool) as [ToolType, HistoryItem[]][]).map(([tool, toolItems]) => (
               <div key={tool}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="text-primary">
@@ -242,20 +225,20 @@ export default function UserHistory() {
                     {toolNames[tool as ToolType]}
                   </h2>
                   <Badge variant="secondary" className="ml-auto">
-                    {toolOutputs.length} çıktı
+                    {toolItems.length} çıktı
                   </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {toolOutputs.map((output: Output) => (
+                  {toolItems.map((item: HistoryItem) => (
                     <Card
-                      key={output.id}
+                      key={item.id}
                       className={`cursor-pointer transition-all ${
-                        selectedOutput === output.id ? "ring-2 ring-primary" : ""
+                        selectedOutput === item.id ? "ring-2 ring-primary" : ""
                       }`}
                       onClick={() =>
                         setSelectedOutput(
-                          selectedOutput === output.id ? null : output.id
+                          selectedOutput === item.id ? null : item.id
                         )
                       }
                     >
@@ -270,55 +253,63 @@ export default function UserHistory() {
                                 {toolNames[tool as ToolType]}
                               </Badge>
                               <Badge variant="outline" className="text-xs">
-                                {new Date(output.createdAt).toLocaleDateString(
-                                  "tr-TR"
-                                )}
+                                {new Date(item.createdAt).toLocaleDateString("tr-TR")}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="w-4 h-4" />
                               <span>
-                                {new Date(output.createdAt).toLocaleTimeString(
-                                  "tr-TR"
-                                )}
+                                {new Date(item.createdAt).toLocaleTimeString("tr-TR")}
                               </span>
                             </div>
                           </div>
-                          {output.outputUrl && (
+                          <div className="flex gap-1">
+                            {item.outputUrl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownload(item);
+                                }}
+                              >
+                                <Download className="w-4 h-4 text-primary" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDownload(output);
+                                handleDelete(item.id);
                               }}
                             >
-                              <Download className="w-4 h-4 text-primary" />
+                              <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </CardHeader>
 
-                      {selectedOutput === output.id && (
+                      {selectedOutput === item.id && (
                         <CardContent className="pt-0 pb-6 border-t border-border">
                           <div className="mt-4 space-y-4">
-                            {renderMetadata(output.metadata, tool as ToolType)}
+                            {renderMetadata(item.metadata, tool as ToolType)}
 
-                            {output.outputUrl && (
+                            {item.outputUrl && (
                               <div className="pt-4 border-t border-border">
                                 <p className="text-sm font-medium text-foreground mb-2">
                                   Çıktı
                                 </p>
                                 {tool === "logo" && (
                                   <img
-                                    src={output.outputUrl}
+                                    src={item.outputUrl}
                                     alt="Logo"
                                     className="w-32 h-32 object-contain rounded"
                                   />
                                 )}
                                 {(tool === "voice" || tool === "video") && (
                                   <a
-                                    href={output.outputUrl}
+                                    href={item.outputUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-sm text-primary hover:underline flex items-center gap-2"
@@ -330,23 +321,23 @@ export default function UserHistory() {
                               </div>
                             )}
 
-                            {(tool === "presentation" || tool === "coding") && output.metadata && (
+                            {(tool === "presentation" || tool === "coding") && item.metadata && (
                               <div className="pt-4 border-t border-border">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
                                     try {
-                                      const data = JSON.parse(output.metadata || "{}");
+                                      const data = JSON.parse(item.metadata || "{}");
                                       let content = "";
                                       let filename = "";
 
                                       if (tool === "presentation") {
                                         content = JSON.stringify(data, null, 2);
-                                        filename = `sunum-${output.id}.json`;
+                                        filename = `sunum-${item.id}.json`;
                                       } else if (tool === "coding") {
                                         content = data.code || data.explanation || JSON.stringify(data, null, 2);
-                                        filename = `kod-${output.id}.txt`;
+                                        filename = `kod-${item.id}.txt`;
                                       }
 
                                       if (content) {
@@ -374,9 +365,7 @@ export default function UserHistory() {
 
                             <div className="flex items-center gap-2 text-xs text-muted-foreground pt-4 border-t border-border">
                               <CheckCircle className="w-4 h-4 text-green-500" />
-                              {new Date(output.createdAt).toLocaleString(
-                                "tr-TR"
-                              )}
+                              {new Date(item.createdAt).toLocaleString("tr-TR")}
                             </div>
                           </div>
                         </CardContent>

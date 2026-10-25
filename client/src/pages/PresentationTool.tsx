@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import type { ChangeEvent } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,8 +17,8 @@ import {
   ChevronDown,
   ChevronUp,
   Wand2,
-  FileDown,
 } from "lucide-react";
+import { addHistoryItem } from "@/lib/history";
 
 type Slide = {
   slideNumber: number;
@@ -34,47 +33,116 @@ type PresentationResult = {
   summary: string;
 };
 
-type ExampleFile = {
-  name: string;
-  url: string;
-  description: string;
-  icon: string;
-};
+/**
+ * Parses plain text into a structured presentation format.
+ * Splits text into paragraphs, identifies potential headings,
+ * and groups content into slides.
+ */
+function buildPresentation(text: string): PresentationResult {
+  const lines = text
+    .split(/[\n\r]+/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
-const exampleFiles: ExampleFile[] = [
-  {
-    name: "Bilişim Teknolojileri Sunumu",
-    url: "/manus-storage/Paragrafmetniniz_8a46d91b.pptx",
-    description: "Profesyonel sunum örneği - Bilişim Teknolojileri Bölümü",
-    icon: "📊",
-  },
-];
+  // If very short text, create a single slide
+  if (lines.length <= 1) {
+    const singleLine = lines[0] || text.trim();
+    return {
+      title: singleLine.slice(0, 60) || "Sunum",
+      summary: singleLine,
+      slides: [
+        {
+          slideNumber: 1,
+          heading: singleLine.slice(0, 50) || "Giriş",
+          bullets: [singleLine],
+          notes: "Bu slayt tek bir içerik parçasından oluşturuldu.",
+        },
+      ],
+    };
+  }
+
+  // Group lines into slides — each short line is a heading, following lines are bullets
+  const slides: Slide[] = [];
+  let currentSlide: Slide | null = null;
+  let slideNum = 1;
+
+  // Try to extract a title from the first line if it's short
+  let title = "Sunum";
+  let startIdx = 0;
+  if (lines[0].length <= 80) {
+    title = lines[0];
+    startIdx = 1;
+  }
+
+  for (let i = startIdx; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Short lines are treated as headings (new slide)
+    if (line.length <= 60 && !line.endsWith(".") && !line.endsWith(",")) {
+      if (currentSlide && currentSlide.bullets.length > 0) {
+        slides.push(currentSlide);
+        slideNum++;
+      }
+      currentSlide = {
+        slideNumber: slideNum,
+        heading: line,
+        bullets: [],
+        notes: "",
+      };
+    } else {
+      // Long lines are bullets — split by sentences if very long
+      if (!currentSlide) {
+        currentSlide = {
+          slideNumber: slideNum,
+          heading: "Giriş",
+          bullets: [],
+          notes: "",
+        };
+      }
+      const sentences = line.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+      if (sentences.length > 1) {
+        currentSlide.bullets.push(...sentences.map((s) => s.trim()));
+      } else {
+        currentSlide.bullets.push(line);
+      }
+    }
+  }
+
+  // Push last slide
+  if (currentSlide && currentSlide.bullets.length > 0) {
+    slides.push(currentSlide);
+  }
+
+  // If no slides were created, make one from all lines
+  if (slides.length === 0) {
+    slides.push({
+      slideNumber: 1,
+      heading: title,
+      bullets: lines.slice(startIdx, 5),
+      notes: "",
+    });
+  }
+
+  // Limit bullets per slide to 6
+  slides.forEach((s) => {
+    if (s.bullets.length > 6) {
+      s.notes = `Bu slaytta ${s.bullets.length} madde vardı, ilk 6'sı gösteriliyor.`;
+      s.bullets = s.bullets.slice(0, 6);
+    }
+  });
+
+  const summary = `"${title}" konulu sunum ${slides.length} slayttan oluşmaktadır. Metniniz otomatik olarak başlıklar ve madde işaretleri ile yapılandırıldı.`;
+
+  return { title, slides, summary };
+}
 
 export default function PresentationTool() {
   const [inputText, setInputText] = useState("");
   const [fileName, setFileName] = useState("");
   const [result, setResult] = useState<PresentationResult | null>(null);
   const [expandedSlides, setExpandedSlides] = useState<Set<number>>(new Set([1]));
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const improveMutation = trpc.presentation.improve.useMutation({
-    onSuccess: (data) => {
-      setResult(data);
-      setExpandedSlides(new Set([1]));
-      toast.success("Sunum başarıyla iyileştirildi!");
-    },
-    onError: (err) => toast.error("Hata: " + err.message),
-  });
-
-  const generateImageMutation = trpc.presentation.generateImage.useMutation({
-    onSuccess: (data) => {
-      setGeneratedImage(data.url ?? null);
-      toast.success("Görsel oluşturuldu!");
-    },
-    onError: (err) => toast.error("Görsel oluşturulamadı: " + err.message),
-  });
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,13 +151,12 @@ export default function PresentationTool() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      // For PDF files, raw text may contain encoding artifacts
       const cleanText = text.replace(/[^\x20-\x7E\u00C0-\u024F\u0100-\u017E\n\r\t]/g, " ").replace(/\s+/g, " ").trim();
       setInputText(cleanText || text);
       if (file.type === "application/pdf") {
         toast.info("PDF yüklendi. Ham metin çıkarıldı. Daha iyi sonuç için metni yapıştırmanız önerilir.");
       } else {
-        toast.info("Dosya yüklendi. AI ile iyileştirmek için butona tıklayın.");
+        toast.info("Dosya yüklendi. İyileştirmek için butona tıklayın.");
       }
     };
     reader.readAsText(file, "UTF-8");
@@ -100,7 +167,19 @@ export default function PresentationTool() {
       toast.error("Lütfen metin girin veya dosya yükleyin.");
       return;
     }
-    improveMutation.mutate({ text: inputText, fileName });
+    setIsProcessing(true);
+    // Simulate brief processing for UX
+    setTimeout(() => {
+      const parsed = buildPresentation(inputText);
+      setResult(parsed);
+      setExpandedSlides(new Set([1]));
+      addHistoryItem({
+        toolType: "presentation",
+        metadata: JSON.stringify(parsed),
+      });
+      setIsProcessing(false);
+      toast.success("Sunum başarıyla yapılandırıldı!");
+    }, 600);
   };
 
   const toggleSlide = (num: number) => {
@@ -143,7 +222,7 @@ export default function PresentationTool() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Sunum Aracı</h1>
             <p className="text-muted-foreground text-sm">
-              Metni veya PDF'i AI ile profesyonel sunuma dönüştür
+              Metni veya dosyayı otomatik olarak profesyonel sunum yapısına dönüştür
             </p>
           </div>
         </div>
@@ -168,11 +247,11 @@ export default function PresentationTool() {
                   <p className="text-sm font-medium text-foreground">
                     {fileName || "Dosya yükle"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">TXT, PDF desteklenir</p>
+                  <p className="text-xs text-muted-foreground mt-1">TXT desteklenir</p>
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".txt,.pdf"
+                    accept=".txt,.md"
                     className="hidden"
                     onChange={handleFileSelect}
                   />
@@ -196,121 +275,40 @@ export default function PresentationTool() {
                 <Button
                   className="w-full gap-2"
                   onClick={handleImprove}
-                  disabled={improveMutation.isPending || !inputText.trim()}
+                  disabled={isProcessing || !inputText.trim()}
                 >
-                  {improveMutation.isPending ? (
+                  {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      AI İyileştiriyor...
+                      Yapılandırılıyor...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      AI ile İyileştir
+                      Sunuma Dönüştür
                     </>
                   )}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Image Generator */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Image className="w-4 h-4 text-purple-600" />
-                  Görsel Üret
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Textarea
-                  placeholder="Görsel açıklaması girin... (örn: 'Yapay zeka ve eğitim temalı modern illüstrasyon')"
-                  value={imagePrompt}
-                  onChange={(e) => setImagePrompt(e.target.value)}
-                  rows={3}
-                  className="resize-none text-sm"
-                />
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => {
-                    if (!imagePrompt.trim()) {
-                      toast.error("Görsel açıklaması girin.");
-                      return;
-                    }
-                    generateImageMutation.mutate({ prompt: imagePrompt });
-                  }}
-                  disabled={generateImageMutation.isPending}
-                >
-                  {generateImageMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Oluşturuluyor...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-4 h-4" />
-                      Görsel Oluştur
-                    </>
-                  )}
-                </Button>
-
-                {generatedImage && (
-                  <div className="space-y-2">
-                    <img
-                      src={generatedImage}
-                      alt="Üretilen görsel"
-                      className="w-full rounded-lg border border-border shadow-sm"
-                    />
-                    <a href={generatedImage} download="sunum-gorseli.png" target="_blank">
-                      <Button variant="outline" size="sm" className="w-full gap-2">
-                        <Download className="w-4 h-4" />
-                        Görseli İndir
-                      </Button>
-                    </a>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Examples Section */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-green-600" />
-                  Örnekler
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {exampleFiles.map((example) => (
-                  <div
-                    key={example.name}
-                    className="p-3 border border-border rounded-lg hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="text-2xl mb-2">{example.icon}</div>
-                        <h4 className="font-medium text-foreground text-sm">{example.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{example.description}</p>
-                      </div>
-                    </div>
-                    <a href={example.url} download className="mt-3 block">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-2 text-xs"
-                      >
-                        <FileDown className="w-3 h-3" />
-                        İndir
-                      </Button>
-                    </a>
-                  </div>
-                ))}
+            {/* Tips Card */}
+            <Card className="border-border bg-blue-50/50 shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold text-blue-700 mb-2">💡 İpuçları</p>
+                <ul className="space-y-1.5 text-xs text-blue-800/80">
+                  <li>• Kısa satırlar slayt başlığı olarak kullanılır</li>
+                  <li>• Uzun paragraflar madde işaretlerine ayrılır</li>
+                  <li>• En fazla 6 madde içeren slaytlar oluşturulur</li>
+                  <li>• Daha iyi sonuç için metni başlıklarla düzenleyin</li>
+                </ul>
               </CardContent>
             </Card>
           </div>
 
           {/* Result Panel */}
-          <div className="lg:col-span-3">          {result ? (
+          <div className="lg:col-span-3">
+            {result ? (
               <div className="space-y-4">
                 {/* Summary Card */}
                 <Card className="border-blue-200 bg-blue-50/50 shadow-sm">
@@ -392,7 +390,7 @@ export default function PresentationTool() {
                   </div>
                   <h3 className="font-semibold text-foreground mb-2">Sunum Hazır Değil</h3>
                   <p className="text-muted-foreground text-sm max-w-xs">
-                    Sol taraftan metin girin veya dosya yükleyin, ardından "AI ile İyileştir"
+                    Sol taraftan metin girin veya dosya yükleyin, ardından "Sunuma Dönüştür"
                     butonuna tıklayın.
                   </p>
                 </CardContent>

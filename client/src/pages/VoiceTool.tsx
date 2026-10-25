@@ -1,86 +1,37 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { ChangeEvent } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Mic,
+  MicOff,
   Upload,
   Loader2,
-  FileAudio,
   AlignLeft,
   BarChart2,
   Download,
   CheckCircle2,
-  ExternalLink,
+  Square,
+  AlertCircle,
 } from "lucide-react";
+import { addHistoryItem } from "@/lib/history";
 
-type ToneOption = {
-  id: string;
-  label: string;
-  desc: string;
-  emoji: string;
+// Minimal type declarations for Web Speech API (not in standard lib.d.ts)
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: any) => void) | null;
+  onerror: ((event: any) => void) | null;
+  onend: (() => void) | null;
 };
-
-type AITool = {
-  name: string;
-  description: string;
-  url: string;
-  icon: string;
-};
-
-const toneOptions: ToneOption[] = [
-  { id: "natural", label: "Doğal", desc: "Orijinal ses tonu", emoji: "🎙️" },
-  { id: "deeper", label: "Derin", desc: "Daha güçlü, otoriter ses", emoji: "🔊" },
-  { id: "faster", label: "Hızlı", desc: "Daha enerjik, dinamik", emoji: "⚡" },
-  { id: "cinematic", label: "Sinematik", desc: "Film kalitesi, dramatik", emoji: "🎬" },
-];
-
-const voiceAITools: AITool[] = [
-  {
-    name: "Descript",
-    description: "AI-powered audio editing and transcription",
-    url: "https://www.descript.com",
-    icon: "📝",
-  },
-  {
-    name: "ElevenLabs",
-    description: "AI voice generation and cloning",
-    url: "https://elevenlabs.io",
-    icon: "🎙️",
-  },
-  {
-    name: "Synthesia",
-    description: "AI video creation with voice",
-    url: "https://www.synthesia.io",
-    icon: "🤖",
-  },
-  {
-    name: "Adobe Podcast",
-    description: "Enhance audio with AI",
-    url: "https://podcast.adobe.com",
-    icon: "🎧",
-  },
-  {
-    name: "Murf AI",
-    description: "AI voice studio and generator",
-    url: "https://murf.ai",
-    icon: "🎵",
-  },
-  {
-    name: "Voicemod",
-    description: "Real-time voice changer",
-    url: "https://www.voicemod.net",
-    icon: "🔄",
-  },
-];
 
 type VoiceResult = {
   transcription: string;
-  segments: Array<{ start: number; end: number; text: string }>;
   analysis: {
     summary: string;
     keyPoints: string[];
@@ -90,62 +41,165 @@ type VoiceResult = {
   };
 };
 
+function analyzeText(text: string): VoiceResult["analysis"] {
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
+  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  const wordCount = words.length;
+
+  // Key points: pick first sentence of each "paragraph" or first few sentences
+  const keyPoints: string[] = [];
+  const meaningfulSentences = sentences
+    .map((s) => s.trim())
+    .filter((s) => s.split(/\s+/).length >= 3);
+  const pickCount = Math.min(5, meaningfulSentences.length);
+  const step = Math.max(1, Math.floor(meaningfulSentences.length / pickCount));
+  for (let i = 0; i < meaningfulSentences.length && keyPoints.length < pickCount; i += step) {
+    const s = meaningfulSentences[i];
+    keyPoints.push(s.length > 80 ? s.slice(0, 80) + "..." : s);
+  }
+
+  // Determine tone based on punctuation and keywords
+  let tone = "Bilgilendirici";
+  const exclamationCount = (text.match(/!/g) || []).length;
+  const questionCount = (text.match(/\?/g) || []).length;
+  if (exclamationCount > wordCount * 0.03) tone = "Heyecanlı / Enerjik";
+  else if (questionCount > wordCount * 0.04) tone = "Soru Soran / Etkileşimli";
+  else if (text.length > 500) tone = "Detaylı / Kapsamlı";
+  else if (wordCount < 30) tone = "Kısa / Öz";
+
+  // Summary: first 2 sentences
+  const summary = meaningfulSentences.slice(0, 2).join(" ") || text.slice(0, 150);
+
+  return {
+    summary,
+    keyPoints: keyPoints.length > 0 ? keyPoints : ["Metin çok kısa, anahtar nokta çıkarılamadı."],
+    tone,
+    wordCount,
+    language: "tr",
+  };
+}
+
 export default function VoiceTool() {
-  const [selectedTone, setSelectedTone] = useState("natural");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [result, setResult] = useState<VoiceResult | null>(null);
   const [activeTab, setActiveTab] = useState<"transcript" | "analysis">("transcript");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const finalTranscriptRef = useRef("");
 
-  const uploadMutation = trpc.upload.getUploadUrl.useMutation({
-    onSuccess: (data) => {
-      setUploadedUrl(data.url);
-      toast.success("Dosya yüklendi! Şimdi transkripsiyon başlatabilirsiniz.");
-    },
-    onError: (err) => toast.error("Yükleme hatası: " + err.message),
-  });
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
 
-  const transcribeMutation = trpc.voice.transcribe.useMutation({
-    onSuccess: (data) => {
-      setResult(data);
-      toast.success("Transkripsiyon tamamlandı!");
-    },
-    onError: (err) => toast.error("Transkripsiyon hatası: " + err.message),
-  });
+  const startRecording = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 16 * 1024 * 1024) {
-      toast.error("Dosya boyutu 16MB'ı geçemez.");
+    if (!SpeechRecognition) {
+      toast.error("Tarayıcınız ses tanımayı desteklemiyor. Chrome veya Edge kullanın.");
       return;
     }
 
-    setUploadedFile(file);
+    const recognition = new SpeechRecognition() as SpeechRecognitionLike;
+    recognition.lang = "tr-TR";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    finalTranscriptRef.current = "";
+    setTranscript("");
+    setInterimTranscript("");
     setResult(null);
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const base64 = (ev.target?.result as string).split(",")[1];
-      if (!base64) return;
-      uploadMutation.mutate({
-        fileName: file.name,
-        fileType: file.type,
-        toolType: "voice",
-        fileBase64: base64,
-      });
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptPart = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += transcriptPart + " ";
+        } else {
+          interim += transcriptPart;
+        }
+      }
+      if (final) {
+        finalTranscriptRef.current += final;
+        setTranscript(finalTranscriptRef.current);
+      }
+      setInterimTranscript(interim);
     };
-    reader.readAsDataURL(file);
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        toast.error("Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin verin.");
+      } else if (event.error === "no-speech") {
+        // Not an error worth showing — just stopped listening
+      } else {
+        toast.error("Ses tanıma hatası: " + event.error);
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      setInterimTranscript("");
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+    toast.info("Dinleniyor... Konuşmaya başlayın.");
   };
 
-  const handleTranscribe = () => {
-    if (!uploadedUrl) {
-      toast.error("Önce bir dosya yükleyin.");
+  const stopRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleAnalyze = () => {
+    const fullText = finalTranscriptRef.current.trim();
+    if (!fullText) {
+      toast.error("Önce ses kaydı yapın veya metin yükleyin.");
       return;
     }
-    transcribeMutation.mutate({ audioUrl: uploadedUrl, language: "tr" });
+    setIsLoading(true);
+    setTimeout(() => {
+      const analysis = analyzeText(fullText);
+      const voiceResult: VoiceResult = { transcription: fullText, analysis };
+      setResult(voiceResult);
+      addHistoryItem({
+        toolType: "voice",
+        metadata: JSON.stringify({ transcription: fullText, analysis }),
+      });
+      setIsLoading(false);
+      toast.success("Analiz tamamlandı!");
+    }, 400);
+  };
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      finalTranscriptRef.current = text;
+      setTranscript(text);
+      setResult(null);
+      toast.info("Metin yüklendi. Analiz için butona tıklayın.");
+    };
+    reader.readAsText(file, "UTF-8");
   };
 
   const downloadTranscript = () => {
@@ -161,210 +215,238 @@ export default function VoiceTool() {
     toast.success("Transkripsiyon indirildi!");
   };
 
-  const isLoading = uploadMutation.isPending || transcribeMutation.isPending;
+  const fullDisplay = transcript + (interimTranscript ? " " + interimTranscript : "");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50/30 to-white py-12 px-4">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Mic className="w-8 h-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Ses Değiştirici</h1>
+            <Mic className="w-8 h-8 text-emerald-600" />
+            <h1 className="text-4xl font-bold text-gray-900">Ses Aracı</h1>
           </div>
           <p className="text-gray-600 text-lg">
-            Ses dosyalarınızı yükleyin, transkripsiyon alın ve içerik analizi yapın
+            Mikrofonla konuşun veya metin yükleyin — transkripsiyon ve analiz alın
           </p>
         </div>
 
-        {/* Upload Section */}
-        <div className="space-y-8">
+        {/* Recording Section */}
+        <Card className="border-emerald-200 bg-emerald-50/50 mb-6">
+          <CardContent className="pt-6 pb-6">
+            <div className="text-center space-y-6">
+              {/* Mic Button */}
+              <div className="relative inline-block">
+                {isRecording && (
+                  <div className="absolute inset-0 rounded-full bg-red-400/30 animate-ping" />
+                )}
+                <button
+                  onClick={isRecording ? stopRecording : startRecording}
+                  className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                    isRecording
+                      ? "bg-red-500 hover:bg-red-600 shadow-red-500/30"
+                      : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30"
+                  }`}
+                >
+                  {isRecording ? (
+                    <Square className="w-7 h-7 text-white" fill="white" />
+                  ) : (
+                    <Mic className="w-8 h-8 text-white" />
+                  )}
+                </button>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">
+                  {isRecording ? "Dinleniyor... Durdurmak için tıklayın" : "Kayıt başlatmak için mikrofona tıklayın"}
+                </p>
+                {isRecording && (
+                  <div className="flex items-center justify-center gap-1 mt-2">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-1 bg-emerald-500 rounded-full animate-pulse"
+                        style={{
+                          height: `${8 + Math.random() * 16}px`,
+                          animationDelay: `${i * 0.15}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          {/* Tone Selection - Removed */}
-          {false && uploadedUrl && !result && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle>Ses Tonu Seçin</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {toneOptions.map((tone) => (
-                    <button
-                      key={tone.id}
-                      onClick={() => setSelectedTone(tone.id)}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        selectedTone === tone.id
-                          ? "border-blue-600 bg-blue-100"
-                          : "border-gray-200 bg-white hover:border-blue-400"
-                      }`}
-                    >
-                      <div className="text-3xl mb-2">{tone.emoji}</div>
-                      <div className="font-semibold text-gray-900">{tone.label}</div>
-                      <div className="text-xs text-gray-600">{tone.desc}</div>
-                    </button>
-                  ))}
+              {/* Live Transcript */}
+              {(transcript || interimTranscript) && (
+                <div className="bg-white rounded-lg p-4 border border-emerald-200 text-left max-h-48 overflow-y-auto">
+                  <p className="text-gray-700 whitespace-pre-wrap">
+                    {transcript}
+                    {interimTranscript && (
+                      <span className="text-gray-400 italic"> {interimTranscript}</span>
+                    )}
+                  </p>
                 </div>
-                <Separator />
+              )}
+
+              {/* File Upload & Analyze */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".txt,.md"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-sm font-medium text-foreground hover:bg-muted transition-all">
+                    <Upload className="w-4 h-4" />
+                    Metin Yükle
+                  </span>
+                </label>
                 <Button
-                  onClick={handleTranscribe}
+                  onClick={handleAnalyze}
                   size="lg"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={isLoading}
+                  className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                  disabled={isLoading || !transcript.trim()}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Transkripsiyon Yapılıyor...
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analiz Yapılıyor...
                     </>
                   ) : (
                     <>
-                      <Mic className="w-4 h-4 mr-2" />
-                      Transkripsiyon Başlat
+                      <BarChart2 className="w-4 h-4" />
+                      Analiz Et
                     </>
                   )}
                 </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Results */}
-          {result && (
-            <>
-              <Card className="border-green-200 bg-green-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-700">
-                    <CheckCircle2 className="w-5 h-5" />
-                    Transkripsiyon Tamamlandı
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-
-              {/* Tabs */}
-              <div className="flex gap-2 border-b border-gray-200">
-                {(["transcript", "analysis"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-                      activeTab === tab
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    {tab === "transcript" && "Transkripsiyon"}
-                    {tab === "analysis" && "Analiz"}
-                  </button>
-                ))}
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              {/* Tab Content */}
-              {activeTab === "transcript" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlignLeft className="w-5 h-5" />
-                      Ses Transkripsiyon
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                      <p className="text-gray-700 whitespace-pre-wrap">{result.transcription}</p>
-                    </div>
-                    <Button
-                      onClick={downloadTranscript}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Transkripsiyon İndir
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+        {/* Results */}
+        {result && (
+          <>
+            <Card className="border-green-200 bg-green-50 mb-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Analiz Tamamlandı
+                </CardTitle>
+              </CardHeader>
+            </Card>
 
-              {activeTab === "analysis" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart2 className="w-5 h-5" />
-                      İçerik Analizi
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Özet</h4>
-                      <p className="text-gray-700">{result.analysis.summary}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Anahtar Noktalar</h4>
-                      <ul className="space-y-2">
-                        {result.analysis.keyPoints.map((point, idx) => (
-                          <li
-                            key={idx}
-                            className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg"
-                          >
-                            <span className="text-blue-600 font-bold mt-1">•</span>
-                            <span className="text-gray-700">{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <p className="text-sm text-gray-600">Ses Tonu</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {result.analysis.tone}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <p className="text-sm text-gray-600">Kelime Sayısı</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {result.analysis.wordCount}
-                        </p>
-                      </div>
-                      <div className="p-4 bg-gray-50 rounded-lg text-center">
-                        <p className="text-sm text-gray-600">Dil</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {result.analysis.language}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-
-          {/* AI Tools Section */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Ses Düzenleme Araçları</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {voiceAITools.map((tool) => (
-                <Card
-                  key={tool.name}
-                  className="hover:shadow-lg transition-shadow cursor-pointer border-gray-200"
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-gray-200 mb-4">
+              {(["transcript", "analysis"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                    activeTab === tab
+                      ? "border-emerald-600 text-emerald-600"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
                 >
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-4">
-                      <div className="text-4xl">{tool.icon}</div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{tool.name}</h3>
-                        <p className="text-sm text-gray-600 mt-2">{tool.description}</p>
-                      </div>
-                      <a
-                        href={tool.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Ziyaret Et <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  </CardContent>
-                </Card>
+                  {tab === "transcript" && "Transkripsiyon"}
+                  {tab === "analysis" && "Analiz"}
+                </button>
               ))}
             </div>
-          </div>
-        </div>
+
+            {activeTab === "transcript" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlignLeft className="w-5 h-5" />
+                    Ses Transkripsiyon
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
+                    <p className="text-gray-700 whitespace-pre-wrap">{result.transcription}</p>
+                  </div>
+                  <Button
+                    onClick={downloadTranscript}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Transkripsiyon İndir
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === "analysis" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart2 className="w-5 h-5" />
+                    İçerik Analizi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Özet</h4>
+                    <p className="text-gray-700">{result.analysis.summary}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Anahtar Noktalar</h4>
+                    <ul className="space-y-2">
+                      {result.analysis.keyPoints.map((point, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-start gap-3 p-3 bg-emerald-50 rounded-lg"
+                        >
+                          <span className="text-emerald-600 font-bold mt-1">•</span>
+                          <span className="text-gray-700">{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-lg text-center">
+                      <p className="text-sm text-gray-600">Ses Tonu</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {result.analysis.tone}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg text-center">
+                      <p className="text-sm text-gray-600">Kelime Sayısı</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {result.analysis.wordCount}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg text-center">
+                      <p className="text-sm text-gray-600">Dil</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {result.analysis.language}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+
+        {/* Browser support notice */}
+        {!result && !transcript && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 mb-1">Tarayıcı Uyumluluğu</p>
+                  <p className="text-xs text-amber-700/80">
+                    Ses tanıma özelliği Chrome ve Edge tarayıcılarında çalışır. Alternatif olarak
+                    metin dosyası yükleyip analiz edebilirsiniz.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Footer */}

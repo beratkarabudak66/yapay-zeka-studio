@@ -1,89 +1,442 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Code2,
-  Sparkles,
   Copy,
-  CheckCheck,
+  Download,
   Loader2,
-  Lightbulb,
-  AlertTriangle,
-  BookOpen,
-  Wrench,
-  Zap,
+  Sparkles,
+  Terminal,
 } from "lucide-react";
+import { addHistoryItem } from "@/lib/history";
 
-type Language = "html" | "css" | "javascript" | "python";
-type Mode = "generate" | "explain" | "fix";
+type Language = "javascript" | "python" | "html" | "css" | "sql" | "bash";
+
+const languages: { id: Language; label: string; icon: string }[] = [
+  { id: "javascript", label: "JavaScript", icon: "JS" },
+  { id: "python", label: "Python", icon: "PY" },
+  { id: "html", label: "HTML", icon: "HTML" },
+  { id: "css", label: "CSS", icon: "CSS" },
+  { id: "sql", label: "SQL", icon: "SQL" },
+  { id: "bash", label: "Bash", icon: "$" },
+];
+
+type SnippetType = {
+  id: string;
+  label: string;
+  desc: string;
+  languages: Language[];
+};
+
+const snippetTypes: SnippetType[] = [
+  { id: "function", label: "Fonksiyon", desc: "Yeniden kullanılabilir fonksiyon şablonu", languages: ["javascript", "python"] },
+  { id: "loop", label: "Döngü", desc: "For/while döngüsü örneği", languages: ["javascript", "python", "bash"] },
+  { id: "array", label: "Dizi İşlemi", desc: "Map, filter, reduce örnekleri", languages: ["javascript", "python"] },
+  { id: "fetch", label: "API İsteği", desc: "HTTP GET/POST isteği", languages: ["javascript", "python"] },
+  { id: "form", label: "Form", desc: "HTML form yapısı", languages: ["html", "css"] },
+  { id: "layout", label: "Flex Layout", desc: "CSS Flexbox düzeni", languages: ["css"] },
+  { id: "select", label: "SELECT Sorgusu", desc: "Veritabanı sorgu örnekleri", languages: ["sql"] },
+  { id: "script", label: "Shell Script", desc: "Bash betik örneği", languages: ["bash"] },
+];
+
+function generateCode(lang: Language, typeId: string, topic: string): { code: string; explanation: string } {
+  const t = topic.trim() || "örnek";
+  switch (typeId) {
+    case "function":
+      if (lang === "javascript") {
+        return {
+          code: `// ${t} için fonksiyon
+function process${capitalize(t)}(input) {
+  if (!input) {
+    throw new Error("Girdi boş olamaz");
+  }
+  const result = input;
+  return result;
+}
+
+// Kullanım:
+const output = process${capitalize(t)}("test verisi");
+console.log(output);`,
+          explanation: `${t} işlemek için bir JavaScript fonksiyonu. Hata kontrolü içerir ve bir değer döndürür.`,
+        };
+      }
+      return {
+        code: `# ${t} için fonksiyon
+def process_${snakeCase(t)}(input):
+    if not input:
+        raise ValueError("Girdi boş olamaz")
+    result = input
+    return result
+
+# Kullanım:
+output = process_${snakeCase(t)}("test verisi")
+print(output)`,
+        explanation: `${t} işlemek için bir Python fonksiyonu. Hata kontrolü içerir ve bir değer döndürür.`,
+      };
+
+    case "loop":
+      if (lang === "javascript") {
+        return {
+          code: `// ${t} için döngü örneği
+const items = ["a", "b", "c", "d"];
+
+// For döngüsü
+for (let i = 0; i < items.length; i++) {
+  console.log(\`Öğe \${i}: \${items[i]}\`);
+}
+
+// For...of döngüsü
+for (const item of items) {
+  console.log(item);
+}
+
+// While döngüsü
+let count = 0;
+while (count < items.length) {
+  console.log(\`Sayım: \${count}\`);
+  count++;
+}`,
+          explanation: `${t} için üç farklı döngü türü: klasik for, for...of ve while.`,
+        };
+      }
+      if (lang === "python") {
+        return {
+          code: `# ${t} için döngü örneği
+items = ["a", "b", "c", "d"]
+
+# For döngüsü
+for i, item in enumerate(items):
+    print(f"Öğe {i}: {item}")
+
+# While döngüsü
+count = 0
+while count < len(items):
+    print(f"Sayım: {count}")
+    count += 1`,
+          explanation: `${t} için Python döngü örnekleri: enumerate ile for ve while.`,
+        };
+      }
+      return {
+        code: `#!/bin/bash
+# ${t} için bash döngü
+items=("a" "b" "c" "d")
+
+for item in "\${items[@]}"; do
+    echo "Öğe: $item"
+done
+
+count=0
+while [ $count -lt \${#items[@]} ]; do
+    echo "Sayım: $count"
+    ((count++))
+done`,
+        explanation: `${t} için bash döngü örnekleri: for ve while.`,
+      };
+
+    case "array":
+      if (lang === "javascript") {
+        return {
+          code: `// ${t} için dizi işlemleri
+const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+// map: her elemanı dönüştür
+const doubled = data.map(n => n * 2);
+
+// filter: koşula uyanları seç
+const evens = data.filter(n => n % 2 === 0);
+
+// reduce: tek bir değere indir
+const sum = data.reduce((acc, n) => acc + n, 0);
+
+// find: ilk eşleşen eleman
+const firstBig = data.find(n => n > 5);
+
+console.log({ doubled, evens, sum, firstBig });`,
+          explanation: `${t} için JavaScript dizi metotları: map, filter, reduce ve find.`,
+        };
+      }
+      return {
+        code: `# ${t} için liste işlemleri
+data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# map: her elemanı dönüştür
+doubled = list(map(lambda n: n * 2, data))
+
+# filter: koşula uyanları seç
+evens = list(filter(lambda n: n % 2 == 0, data))
+
+# reduce: tek bir değere indir
+from functools import reduce
+total = reduce(lambda acc, n: acc + n, data, 0)
+
+print({"doubled": doubled, "evens": evens, "sum": total})`,
+        explanation: `${t} için Python liste işlemleri: map, filter ve reduce.`,
+      };
+
+    case "fetch":
+      if (lang === "javascript") {
+        return {
+          code: `// ${t} için API isteği
+async function fetchData(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(\`HTTP hatası: \${response.status}\`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("İstek başarısız:", error);
+    throw error;
+  }
+}
+
+// POST isteği
+async function postData(url, body) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}
+
+// Kullanım:
+fetchData("https://api.example.com/${snakeCase(t)}")
+  .then(data => console.log(data));`,
+          explanation: `${t} için async/await ile GET ve POST istekleri. Hata yönetimi içerir.`,
+        };
+      }
+      return {
+        code: `# ${t} için API isteği
+import urllib.request
+import json
+
+def fetch_data(url):
+    try:
+        with urllib.request.urlopen(url) as response:
+            data = json.loads(response.read().decode())
+            return data
+    except Exception as e:
+        print(f"İstek başarısız: {e}")
+        raise
+
+# requests kütüphanesi ile (pip install requests)
+import requests
+
+def post_data(url, body):
+    response = requests.post(url, json=body)
+    response.raise_for_status()
+    return response.json()
+
+# Kullanım:
+data = fetch_data("https://api.example.com/${snakeCase(t)}")
+print(data)`,
+        explanation: `${t} için Python HTTP istekleri. urllib ve requests kütüphanesi örnekleri.`,
+      };
+
+    case "form":
+      return {
+        code: `<!-- ${t} için form -->
+<form id="${snakeCase(t)}-form" class="form-container">
+  <h2>${capitalize(t)}</h2>
+
+  <div class="form-group">
+    <label for="name">Ad:</label>
+    <input type="text" id="name" name="name" required placeholder="Adınızı girin" />
+  </div>
+
+  <div class="form-group">
+    <label for="email">E-posta:</label>
+    <input type="email" id="email" name="email" required placeholder="email@ornek.com" />
+  </div>
+
+  <div class="form-group">
+    <label for="message">Mesaj:</label>
+    <textarea id="message" name="message" rows="4" placeholder="Mesajınız"></textarea>
+  </div>
+
+  <button type="submit">Gönder</button>
+</form>`,
+        explanation: `${t} için erişilebilir bir HTML form yapısı. Etiketler, doğrulama ve placeholder içerir.`,
+      };
+
+    case "layout":
+      return {
+        code: `/* ${t} için Flexbox düzeni */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card {
+  flex: 1 1 300px;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Responsive: mobilde tek sütun */
+@media (max-width: 640px) {
+  .row {
+    flex-direction: column;
+  }
+}`,
+        explanation: `${t} için CSS Flexbox düzeni. Responsive ve kart yapısı içerir.`,
+      };
+
+    case "select":
+      return {
+        code: `-- ${t} için SQL sorguları
+
+-- Tüm kayıtları getir
+SELECT * FROM ${snakeCase(t)};
+
+-- Belirli sütunları seç ve filtrele
+SELECT id, name, created_at
+FROM ${snakeCase(t)}
+WHERE status = 'active'
+ORDER BY created_at DESC
+LIMIT 10;
+
+-- Gruplama ve sayım
+SELECT status, COUNT(*) as count
+FROM ${snakeCase(t)}
+GROUP BY status;
+
+-- İki tabloyu birleştir (JOIN)
+SELECT t.id, t.name, c.category_name
+FROM ${snakeCase(t)} t
+LEFT JOIN categories c ON t.category_id = c.id
+WHERE t.status = 'active';`,
+        explanation: `${t} için SQL örnekleri: SELECT, WHERE, ORDER BY, GROUP BY ve JOIN.`,
+      };
+
+    case "script":
+      return {
+        code: `#!/bin/bash
+# ${t} için shell script
+
+set -e  # Hata durumunda dur
+
+# Değişkenler
+INPUT_DIR="./input"
+OUTPUT_DIR="./output"
+DATE=$(date +%Y%m%d)
+
+# Klasör oluştur
+mkdir -p "$OUTPUT_DIR"
+
+# Dosyaları işle
+for file in "$INPUT_DIR"/*; do
+  if [ -f "$file" ]; then
+    filename=$(basename "$file")
+    echo "İşleniyor: $filename"
+    cp "$file" "$OUTPUT_DIR/\${DATE}_$filename"
+  fi
+done
+
+echo "Tamamlandı: $(ls "$OUTPUT_DIR" | wc -l) dosya işlendi"`,
+        explanation: `${t} için bash script. Dosya işleme, değişkenler ve hata yönetimi içerir.`,
+      };
+
+    default:
+      return { code: "// Kod şablonu seçilmedi", explanation: "Bir şablon türü seçin." };
+  }
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(/\s+/g, "");
+}
+
+function snakeCase(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+}
 
 type CodingResult = {
   code: string;
   explanation: string;
-  improvements: string[];
-  errors: string[];
+  language: Language;
+  topic: string;
 };
 
-const languages: { id: Language; label: string; color: string; bg: string; icon: string }[] = [
-  { id: "html", label: "HTML", color: "text-orange-600", bg: "bg-orange-50", icon: "🌐" },
-  { id: "css", label: "CSS", color: "text-blue-600", bg: "bg-blue-50", icon: "🎨" },
-  { id: "javascript", label: "JavaScript", color: "text-yellow-600", bg: "bg-yellow-50", icon: "⚡" },
-  { id: "python", label: "Python", color: "text-green-600", bg: "bg-green-50", icon: "🐍" },
-];
-
-const modes: { id: Mode; label: string; icon: typeof Zap; desc: string }[] = [
-  { id: "generate", label: "Kod Üret", icon: Zap, desc: "Açıklamadan kod oluştur" },
-  { id: "explain", label: "Açıkla", icon: BookOpen, desc: "Kodu sade dille açıkla" },
-  { id: "fix", label: "Düzelt", icon: Wrench, desc: "Hataları bul ve düzelt" },
-];
-
 export default function CodingAssistant() {
+  const [topic, setTopic] = useState("");
   const [selectedLang, setSelectedLang] = useState<Language>("javascript");
-  const [selectedMode, setSelectedMode] = useState<Mode>("generate");
-  const [prompt, setPrompt] = useState("");
-  const [existingCode, setExistingCode] = useState("");
+  const [selectedType, setSelectedType] = useState("function");
   const [result, setResult] = useState<CodingResult | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const generateMutation = trpc.coding.generate.useMutation({
-    onSuccess: (data) => {
-      setResult(data);
-      toast.success("İşlem tamamlandı!");
-    },
-    onError: (err) => toast.error("Hata: " + err.message),
-  });
+  // Filter snippet types by selected language
+  const availableTypes = snippetTypes.filter((t) => t.languages.includes(selectedLang));
 
   const handleGenerate = () => {
-    if (!prompt.trim()) {
-      toast.error("Lütfen bir açıklama veya soru girin.");
+    if (!topic.trim()) {
+      toast.error("Lütfen bir konu girin.");
       return;
     }
-    if ((selectedMode === "explain" || selectedMode === "fix") && !existingCode.trim()) {
-      toast.error("Bu mod için mevcut kodu girin.");
-      return;
+    // Ensure selected type is valid for the language
+    if (!availableTypes.some((t) => t.id === selectedType)) {
+      setSelectedType(availableTypes[0]?.id || "function");
     }
-    generateMutation.mutate({
-      prompt,
-      language: selectedLang,
-      mode: selectedMode,
-      existingCode: existingCode || undefined,
-    });
+    setIsProcessing(true);
+    setTimeout(() => {
+      const { code, explanation } = generateCode(selectedLang, selectedType, topic);
+      const codingResult: CodingResult = { code, explanation, language: selectedLang, topic: topic.trim() };
+      setResult(codingResult);
+      addHistoryItem({
+        toolType: "coding",
+        metadata: JSON.stringify({
+          language: selectedLang,
+          explanation,
+          code,
+        }),
+      });
+      setIsProcessing(false);
+      toast.success("Kod şablonu oluşturuldu!");
+    }, 400);
   };
 
-  const handleCopy = async () => {
-    if (!result?.code) return;
-    await navigator.clipboard.writeText(result.code);
-    setCopied(true);
+  const handleCopy = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(result.code);
     toast.success("Kod kopyalandı!");
-    setTimeout(() => setCopied(false), 2000);
   };
 
-  const langInfo = languages.find((l) => l.id === selectedLang)!;
+  const handleDownload = () => {
+    if (!result) return;
+    const ext: Record<Language, string> = {
+      javascript: "js",
+      python: "py",
+      html: "html",
+      css: "css",
+      sql: "sql",
+      bash: "sh",
+    };
+    const blob = new Blob([result.code], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${snakeCase(result.topic)}.${ext[result.language]}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Kod indirildi!");
+  };
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-10">
@@ -96,7 +449,7 @@ export default function CodingAssistant() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Kodlama Asistanı</h1>
             <p className="text-muted-foreground text-sm">
-              AI ile kod üret, açıkla ve hataları düzelt
+              Konu ve dil seç — hazır kod şablonu anında oluşsun
             </p>
           </div>
         </div>
@@ -104,133 +457,94 @@ export default function CodingAssistant() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Input Panel */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Language Selection */}
-            <Card className="border-border shadow-sm">
+            <Card className="shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Programlama Dili</CardTitle>
+                <CardTitle className="text-base">Ayarlar</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-2">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.id}
-                      onClick={() => setSelectedLang(lang.id)}
-                      className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                        selectedLang === lang.id
-                          ? `border-pink-400 ${lang.bg}`
-                          : "border-border bg-white hover:border-pink-200"
-                      }`}
-                    >
-                      <span className="text-lg">{lang.icon}</span>
-                      <span
-                        className={`text-sm font-semibold ${
-                          selectedLang === lang.id ? lang.color : "text-foreground"
+              <CardContent className="space-y-4">
+                {/* Language */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Dil</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.id}
+                        onClick={() => {
+                          setSelectedLang(lang.id);
+                          // Reset type to first available for this language
+                          const validTypes = snippetTypes.filter((t) => t.languages.includes(lang.id));
+                          if (validTypes.length > 0 && !validTypes.some((t) => t.id === selectedType)) {
+                            setSelectedType(validTypes[0].id);
+                          }
+                        }}
+                        className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all ${
+                          selectedLang === lang.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
                         }`}
                       >
-                        {lang.label}
-                      </span>
-                    </button>
-                  ))}
+                        <span className="w-6 h-6 rounded bg-slate-800 text-white text-[10px] font-bold flex items-center justify-center">
+                          {lang.icon}
+                        </span>
+                        <span className="text-xs font-medium text-foreground">{lang.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Mode Selection */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">İşlem Modu</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {modes.map((mode) => {
-                  const Icon = mode.icon;
-                  return (
-                    <button
-                      key={mode.id}
-                      onClick={() => setSelectedMode(mode.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                        selectedMode === mode.id
-                          ? "border-pink-400 bg-pink-50"
-                          : "border-border bg-white hover:border-pink-200"
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          selectedMode === mode.id ? "bg-pink-100" : "bg-muted"
+                {/* Snippet Type */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Şablon Türü</label>
+                  <div className="space-y-1.5">
+                    {availableTypes.map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => setSelectedType(type.id)}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-lg border-2 transition-all text-left ${
+                          selectedType === type.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
                         }`}
                       >
-                        <Icon
-                          className={`w-4 h-4 ${
-                            selectedMode === mode.id ? "text-pink-600" : "text-muted-foreground"
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{mode.label}</p>
-                        <p className="text-xs text-muted-foreground">{mode.desc}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                        <div>
+                          <span className="font-semibold text-sm text-foreground">{type.label}</span>
+                          <span className="text-xs text-muted-foreground block">{type.desc}</span>
+                        </div>
+                        <Terminal className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Prompt */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">
-                  {selectedMode === "generate"
-                    ? "Ne yapmak istiyorsunuz?"
-                    : selectedMode === "explain"
-                    ? "Açıklama isteği"
-                    : "Hata açıklaması"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Textarea
-                  placeholder={
-                    selectedMode === "generate"
-                      ? `${langInfo.label} ile bir todo listesi uygulaması yaz...`
-                      : selectedMode === "explain"
-                      ? "Bu kodu açıkla, ne yapıyor?"
-                      : "Kodda şu hata var: ..."
-                  }
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  rows={4}
-                  className="resize-none text-sm"
-                />
-
-                {(selectedMode === "explain" || selectedMode === "fix") && (
-                  <>
-                    <p className="text-xs font-medium text-muted-foreground">Mevcut Kod:</p>
-                    <Textarea
-                      placeholder={`${langInfo.label} kodunuzu buraya yapıştırın...`}
-                      value={existingCode}
-                      onChange={(e) => setExistingCode(e.target.value)}
-                      rows={6}
-                      className="resize-none text-sm font-mono"
-                    />
-                  </>
-                )}
+                {/* Topic */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">
+                    Konu / Açıklama
+                  </label>
+                  <input
+                    type="text"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="örn: kullanıcı listesi, veri filtreleme"
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    maxLength={50}
+                  />
+                </div>
 
                 <Button
-                  className="w-full gap-2 bg-pink-600 hover:bg-pink-700"
+                  className="w-full gap-2"
                   onClick={handleGenerate}
-                  disabled={generateMutation.isPending || !prompt.trim()}
+                  disabled={isProcessing || !topic.trim()}
                 >
-                  {generateMutation.isPending ? (
+                  {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      İşleniyor...
+                      Oluşturuluyor...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      {selectedMode === "generate"
-                        ? "Kod Üret"
-                        : selectedMode === "explain"
-                        ? "Açıkla"
-                        : "Düzelt"}
+                      Kod Oluştur
                     </>
                   )}
                 </Button>
@@ -239,130 +553,76 @@ export default function CodingAssistant() {
           </div>
 
           {/* Result Panel */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-3">
             {result ? (
-              <>
-                {/* Code Block */}
-                <Card className="border-border shadow-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">Kod</CardTitle>
-                        <Badge className={`${langInfo.bg} ${langInfo.color} border-0 text-xs`}>
-                          {langInfo.icon} {langInfo.label}
-                        </Badge>
+              <div className="space-y-4">
+                <Card className="shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-400" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                        <div className="w-3 h-3 rounded-full bg-green-400" />
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
+                      <span className="text-slate-300 text-xs font-mono ml-2">
+                        {snakeCase(result.topic)}.{result.language === "javascript" ? "js" : result.language}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
                         onClick={handleCopy}
+                        className="text-slate-300 hover:text-white transition-colors p-1"
+                        title="Kopyala"
                       >
-                        {copied ? (
-                          <>
-                            <CheckCheck className="w-3.5 h-3.5 text-green-600" />
-                            Kopyalandı
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            Kopyala
-                          </>
-                        )}
-                      </Button>
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleDownload}
+                        className="text-slate-300 hover:text-white transition-colors p-1"
+                        title="İndir"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="code-block">
-                      <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">
-                        {result.code}
-                      </pre>
+                  </div>
+                  <pre className="code-block !rounded-none !m-0 max-h-[400px] overflow-auto">
+                    <code>{result.code}</code>
+                  </pre>
+                </Card>
+
+                <Card className="shadow-sm bg-blue-50/40">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground mb-1">Açıklama</p>
+                        <p className="text-sm text-muted-foreground">{result.explanation}</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Explanation */}
-                <Card className="border-border shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-pink-600" />
-                      Açıklama
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-foreground leading-relaxed">{result.explanation}</p>
-                  </CardContent>
-                </Card>
-
-                {/* Errors */}
-                {result.errors.length > 0 && (
-                  <Card className="border-red-200 bg-red-50/50 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2 text-red-700">
-                        <AlertTriangle className="w-4 h-4" />
-                        Tespit Edilen Hatalar
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {result.errors.map((error, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-sm text-red-800 bg-red-100/50 rounded-lg p-2"
-                          >
-                            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                            {error}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Improvements */}
-                {result.improvements.length > 0 && (
-                  <Card className="border-border shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4 text-amber-500" />
-                        İyileştirme Önerileri
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {result.improvements.map((imp, i) => (
-                          <li
-                            key={i}
-                            className="flex items-start gap-2 text-sm text-foreground"
-                          >
-                            <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                              {i + 1}
-                            </span>
-                            {imp}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={handleCopy} className="gap-2">
+                    <Copy className="w-4 h-4" />
+                    Kopyala
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleDownload} className="gap-2">
+                    <Download className="w-4 h-4" />
+                    İndir
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <Card className="border-dashed border-2 border-border h-full min-h-[400px] flex items-center justify-center bg-white shadow-sm">
+              <Card className="border-dashed border-2 border-border h-full min-h-[300px] flex items-center justify-center bg-white shadow-sm">
                 <CardContent className="text-center p-8">
                   <div className="w-16 h-16 rounded-2xl bg-pink-50 flex items-center justify-center mx-auto mb-4">
-                    <Code2 className="w-8 h-8 text-pink-300" />
+                    <Code2 className="w-8 h-8 text-pink-400" />
                   </div>
-                  <h3 className="font-semibold text-foreground mb-2">Kod Bekleniyor</h3>
+                  <h3 className="font-semibold text-foreground mb-2">Kod Hazır Değil</h3>
                   <p className="text-muted-foreground text-sm max-w-xs">
-                    Dil ve mod seçin, açıklama girin ve AI'ın kod üretmesini izleyin.
+                    Dil seç, şablon türü belirle ve konu gir, ardından "Kod Oluştur" butonuna tıkla.
                   </p>
-                  <div className="flex flex-wrap gap-2 justify-center mt-4">
-                    {["HTML", "CSS", "JS", "Python"].map((l) => (
-                      <Badge key={l} variant="secondary" className="text-xs">
-                        {l}
-                      </Badge>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
             )}

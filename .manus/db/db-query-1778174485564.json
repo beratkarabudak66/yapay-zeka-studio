@@ -1,9 +1,0 @@
-{
-  "query": "ALTER TABLE `outputs` MODIFY COLUMN `toolType` enum('presentation','logo','voice','video','coding','video-test') NOT NULL;\nALTER TABLE `uploads` MODIFY COLUMN `toolType` enum('presentation','logo','voice','video','coding','video-test') NOT NULL;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway06.us-east-1.prod.aws.tidbcloud.com --port 4000 --user mS8ZBbE5DqB1XUo.root --database UixmNLRrMXPF7LbA4aTtpf --execute ALTER TABLE `outputs` MODIFY COLUMN `toolType` enum('presentation','logo','voice','video','coding','video-test') NOT NULL;\nALTER TABLE `uploads` MODIFY COLUMN `toolType` enum('presentation','logo','voice','video','coding','video-test') NOT NULL;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 2376
-}
