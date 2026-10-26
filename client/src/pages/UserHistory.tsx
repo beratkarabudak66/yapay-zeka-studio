@@ -7,6 +7,7 @@ import {
   Image,
   Mic,
   Video,
+  FileType,
   Code,
   Eye,
   Download,
@@ -24,6 +25,7 @@ const toolIcons: Record<ToolType, React.ReactNode> = {
   logo: <Image className="w-5 h-5" />,
   voice: <Mic className="w-5 h-5" />,
   video: <Video className="w-5 h-5" />,
+  converter: <FileType className="w-5 h-5" />,
   coding: <Code className="w-5 h-5" />,
   "ai-video-test": <Eye className="w-5 h-5" />,
 };
@@ -33,6 +35,7 @@ const toolNames: Record<ToolType, string> = {
   logo: "Logo",
   voice: "Ses",
   video: "Video",
+  converter: "Dönüştürücü",
   coding: "Kodlama",
   "ai-video-test": "AI Video Test",
 };
@@ -42,6 +45,7 @@ const toolColors: Record<ToolType, string> = {
   logo: "bg-purple-100 text-purple-700",
   voice: "bg-green-100 text-green-700",
   video: "bg-red-100 text-red-700",
+  converter: "bg-amber-100 text-amber-700",
   coding: "bg-orange-100 text-orange-700",
   "ai-video-test": "bg-pink-100 text-pink-700",
 };
@@ -136,6 +140,19 @@ export default function UserHistory() {
             <p className="text-sm text-muted-foreground">
               Konular: {data.topics?.join(", ") || "Yok"}
             </p>
+          </div>
+        );
+      }
+
+      if (toolType === "converter") {
+        return (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              Dönüşüm: {data.conversion || "Bilinmiyor"}
+            </p>
+            {data.filename && (
+              <p className="text-sm text-muted-foreground">Dosya: {data.filename}</p>
+            )}
           </div>
         );
       }

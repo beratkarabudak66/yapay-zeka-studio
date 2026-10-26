@@ -1,4 +1,4 @@
-export type ToolType = "presentation" | "logo" | "voice" | "video" | "coding" | "ai-video-test";
+export type ToolType = "presentation" | "logo" | "voice" | "video" | "converter" | "coding" | "ai-video-test";
 
 export type HistoryItem = {
   id: string;

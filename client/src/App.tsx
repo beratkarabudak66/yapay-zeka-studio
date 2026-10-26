@@ -9,8 +9,7 @@ import Home from "./pages/Home";
 import PresentationTool from "./pages/PresentationTool";
 import LogoGenerator from "./pages/LogoGenerator";
 import VoiceTool from "./pages/VoiceTool";
-import VideoTool from "./pages/VideoTool";
-
+import Converter from "./pages/Converter";
 import CodingAssistant from "./pages/CodingAssistant";
 import AIVideoTest from "./pages/AIVideoTest";
 import UserHistory from "./pages/UserHistory";
@@ -25,7 +24,7 @@ function Router() {
         <Route path="/presentation" component={PresentationTool} />
         <Route path="/logo" component={LogoGenerator} />
         <Route path="/voice" component={VoiceTool} />
-        <Route path="/video" component={VideoTool} />
+        <Route path="/converter" component={Converter} />
 
         <Route path="/coding" component={CodingAssistant} />
         <Route path="/ai-video-test" component={AIVideoTest} />
