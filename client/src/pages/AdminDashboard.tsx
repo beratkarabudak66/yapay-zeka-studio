@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
-import { Mail, MessageSquare, Calendar, Trash2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, MessageSquare, Calendar, Trash2, CheckCircle, AlertCircle, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+const ADMIN_PASSWORD = "beratbaba66";
+const STORAGE_KEY = "smg-admin-auth";
 
 type Feedback = {
   id: string;
@@ -19,9 +22,28 @@ type Feedback = {
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem(STORAGE_KEY) === "1");
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const handleLogin = () => {
+    if (passwordInput.trim() === ADMIN_PASSWORD) {
+      sessionStorage.setItem(STORAGE_KEY, "1");
+      setAuthed(true);
+      setPasswordInput("");
+      toast.success("Giriş başarılı!");
+    } else {
+      toast.error("Hatalı şifre.");
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setAuthed(false);
+    toast.info("Çıkış yapıldı.");
+  };
 
   const { data: feedbacks = [], isLoading } = useQuery<Feedback[]>({
     queryKey: ["feedbacks"],
@@ -33,6 +55,7 @@ export default function AdminDashboard() {
       if (error) throw error;
       return data ?? [];
     },
+    enabled: authed,
   });
 
   const handleDelete = async (id: string) => {
@@ -48,6 +71,45 @@ export default function AdminDashboard() {
       setDeletingId(null);
     }
   };
+
+  // Password gate
+  if (!authed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <Card className="w-full max-w-sm shadow-lg">
+          <CardHeader className="text-center">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <Lock className="w-7 h-7 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Admin Girişi</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Bu alan şifre korumalı. Devam etmek için şifreyi girin.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleLogin();
+              }}
+              placeholder="Şifre"
+              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              autoFocus
+            />
+            <Button className="w-full gap-2" onClick={handleLogin}>
+              <Lock className="w-4 h-4" />
+              Giriş Yap
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => setLocation("/")}>
+              Ana Sayfaya Dön
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -68,11 +130,17 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Geri bildirimleri yönet</p>
+              <p className="text-muted-foreground mt-1">Geri bildirimleri yönet (en fazla 30 saklanır)</p>
             </div>
-            <Button variant="outline" onClick={() => setLocation("/")}>
-              Ana Sayfa
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleLogout} className="gap-2">
+                <Lock className="w-4 h-4" />
+                Çıkış
+              </Button>
+              <Button variant="outline" onClick={() => setLocation("/")}>
+                Ana Sayfa
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -86,7 +154,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Toplam Geri Bildirim</p>
-                  <p className="text-3xl font-bold text-foreground">{feedbacks.length}</p>
+                  <p className="text-3xl font-bold text-foreground">{feedbacks.length} / 30</p>
                 </div>
                 <MessageSquare className="w-10 h-10 text-blue-500 opacity-20" />
               </div>

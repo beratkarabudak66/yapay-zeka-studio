@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { addHistoryItem } from "@/lib/history";
 
-// Minimal type declarations for Web Speech API (not in standard lib.d.ts)
 type SpeechRecognitionLike = {
   lang: string;
   continuous: boolean;
@@ -30,27 +29,98 @@ type SpeechRecognitionLike = {
   onend: (() => void) | null;
 };
 
-type VoiceResult = {
-  transcription: string;
-  analysis: {
-    summary: string;
-    keyPoints: string[];
-    tone: string;
-    wordCount: number;
-    language: string;
-  };
+type ToneLabel = { id: string; label: string };
+
+const TR_TONES: ToneLabel[] = [
+  { id: "informative", label: "Bilgilendirici" },
+  { id: "excited", label: "Heyecanlı / Enerjik" },
+  { id: "questioning", label: "Soru Soran / Etkileşimli" },
+  { id: "detailed", label: "Detaylı / Kapsamlı" },
+  { id: "concise", label: "Kısa / Öz" },
+];
+
+const EN_TONES: ToneLabel[] = [
+  { id: "informative", label: "Informative" },
+  { id: "excited", label: "Excited / Energetic" },
+  { id: "questioning", label: "Questioning / Interactive" },
+  { id: "detailed", label: "Detailed / Comprehensive" },
+  { id: "concise", label: "Brief / Concise" },
+];
+
+function toneLabelById(id: string, tones: ToneLabel[]): string {
+  return tones.find((t) => t.id === id)?.label || tones[0].label;
+}
+
+type AnalysisResult = {
+  summary: string;
+  keyPoints: string[];
+  tone: string;
+  toneLabel: string;
+  wordCount: number;
+  sentenceCount: number;
+  language: string;
+  languageLabel: string;
 };
 
-function analyzeText(text: string): VoiceResult["analysis"] {
+type VoiceResult = {
+  transcription: string;
+  analysis: AnalysisResult;
+};
+
+// Common English stop words for keyword extraction
+const EN_STOPWORDS = new Set([
+  "the", "a", "an", "and", "or", "but", "is", "are", "was", "were", "be",
+  "been", "being", "have", "has", "had", "do", "does", "did", "will", "would",
+  "could", "should", "may", "might", "must", "shall", "can", "need", "dare",
+  "ought", "used", "to", "of", "in", "for", "on", "with", "at", "by", "from",
+  "as", "into", "through", "during", "before", "after", "above", "below",
+  "between", "under", "further", "then", "once", "here", "there", "when",
+  "where", "why", "how", "all", "both", "each", "few", "more", "most",
+  "other", "some", "such", "no", "not", "only", "own", "same", "so", "than",
+  "too", "very", "s", "t", "i", "me", "my", "myself", "we", "our", "ours",
+  "you", "your", "yours", "he", "him", "his", "she", "her", "it", "its",
+  "they", "them", "their", "what", "which", "who", "whom", "this", "that",
+  "these", "those", "am", "if", "because", "while", "about", "against",
+  "up", "down", "out", "off", "over", "under", "again", "any", "each",
+]);
+
+// Turkish stop words
+const TR_STOPWORDS = new Set([
+  "ve", "bir", "bu", "için", "ile", "ben", "sen", "o", "biz", "siz", "onlar",
+  "de", "da", "ki", "mi", "mı", "mu", "mü", "the", "bir", "çok", "daha",
+  "en", "kadar", "gibi", "şey", "yani", "şu", "her", "hiç", "bile", "artık",
+  "ama", "fakat", "lakin", "ancak", "çünkü", "madem", "eğer", "halbuki",
+  "şimdi", "sonra", "önce", "böyle", "öyle", "belki", "demek", "tabi",
+]);
+
+function detectLanguage(text: string): "tr" | "en" {
+  const lower = text.toLowerCase();
+  // Score by stop word presence
+  const words = lower.split(/\s+/).filter((w) => w.length > 0);
+  let enHits = 0;
+  let trHits = 0;
+  for (const w of words) {
+    const clean = w.replace(/[^a-zçğıöşü]/g, "");
+    if (EN_STOPWORDS.has(clean)) enHits++;
+    if (TR_STOPWORDS.has(clean)) trHits++;
+  }
+  // Turkish-specific characters strongly indicate Turkish
+  if (/[çğıöşüÇĞİÖŞÜ]/.test(text)) trHits += 3;
+  return enHits > trHits ? "en" : "tr";
+}
+
+function analyzeText(text: string): AnalysisResult {
+  const lang = detectLanguage(text);
+  const tones = lang === "en" ? EN_TONES : TR_TONES;
   const words = text.split(/\s+/).filter((w) => w.length > 0);
   const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
   const wordCount = words.length;
+  const sentenceCount = sentences.length;
 
-  // Key points: pick first sentence of each "paragraph" or first few sentences
-  const keyPoints: string[] = [];
   const meaningfulSentences = sentences
     .map((s) => s.trim())
     .filter((s) => s.split(/\s+/).length >= 3);
+  const keyPoints: string[] = [];
   const pickCount = Math.min(5, meaningfulSentences.length);
   const step = Math.max(1, Math.floor(meaningfulSentences.length / pickCount));
   for (let i = 0; i < meaningfulSentences.length && keyPoints.length < pickCount; i += step) {
@@ -58,24 +128,30 @@ function analyzeText(text: string): VoiceResult["analysis"] {
     keyPoints.push(s.length > 80 ? s.slice(0, 80) + "..." : s);
   }
 
-  // Determine tone based on punctuation and keywords
-  let tone = "Bilgilendirici";
+  let toneId = "informative";
   const exclamationCount = (text.match(/!/g) || []).length;
   const questionCount = (text.match(/\?/g) || []).length;
-  if (exclamationCount > wordCount * 0.03) tone = "Heyecanlı / Enerjik";
-  else if (questionCount > wordCount * 0.04) tone = "Soru Soran / Etkileşimli";
-  else if (text.length > 500) tone = "Detaylı / Kapsamlı";
-  else if (wordCount < 30) tone = "Kısa / Öz";
+  if (exclamationCount > wordCount * 0.03) toneId = "excited";
+  else if (questionCount > wordCount * 0.04) toneId = "questioning";
+  else if (text.length > 500) toneId = "detailed";
+  else if (wordCount < 30) toneId = "concise";
 
-  // Summary: first 2 sentences
   const summary = meaningfulSentences.slice(0, 2).join(" ") || text.slice(0, 150);
+
+  const noPointsMsg =
+    lang === "en"
+      ? "Text too short to extract key points."
+      : "Metin çok kısa, anahtar nokta çıkarılamadı.";
 
   return {
     summary,
-    keyPoints: keyPoints.length > 0 ? keyPoints : ["Metin çok kısa, anahtar nokta çıkarılamadı."],
-    tone,
+    keyPoints: keyPoints.length > 0 ? keyPoints : [noPointsMsg],
+    tone: toneId,
+    toneLabel: toneLabelById(toneId, tones),
     wordCount,
-    language: "tr",
+    sentenceCount,
+    language: lang,
+    languageLabel: lang === "en" ? "İngilizce" : "Türkçe",
   };
 }
 
@@ -86,6 +162,7 @@ export default function VoiceTool() {
   const [result, setResult] = useState<VoiceResult | null>(null);
   const [activeTab, setActiveTab] = useState<"transcript" | "analysis">("transcript");
   const [isLoading, setIsLoading] = useState(false);
+  const [recognitionLang, setRecognitionLang] = useState<"tr-TR" | "en-US">("tr-TR");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalTranscriptRef = useRef("");
 
@@ -111,7 +188,7 @@ export default function VoiceTool() {
     }
 
     const recognition = new SpeechRecognition() as SpeechRecognitionLike;
-    recognition.lang = "tr-TR";
+    recognition.lang = recognitionLang;
     recognition.continuous = true;
     recognition.interimResults = true;
 
@@ -143,7 +220,7 @@ export default function VoiceTool() {
       if (event.error === "not-allowed") {
         toast.error("Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin verin.");
       } else if (event.error === "no-speech") {
-        // Not an error worth showing — just stopped listening
+        // ignore
       } else {
         toast.error("Ses tanıma hatası: " + event.error);
       }
@@ -158,7 +235,11 @@ export default function VoiceTool() {
     recognitionRef.current = recognition;
     recognition.start();
     setIsRecording(true);
-    toast.info("Dinleniyor... Konuşmaya başlayın.");
+    toast.info(
+      recognitionLang === "en-US"
+        ? "Listening... start speaking in English."
+        : "Dinleniyor... Konuşmaya başlayın."
+    );
   };
 
   const stopRecording = () => {
@@ -204,7 +285,7 @@ export default function VoiceTool() {
 
   const downloadTranscript = () => {
     if (!result) return;
-    const content = `TRANSKRİPSİYON\n${"=".repeat(40)}\n\n${result.transcription}\n\nANALİZ\n${"=".repeat(40)}\n\nÖzet: ${result.analysis.summary}\n\nAnahtar Noktalar:\n${result.analysis.keyPoints.map((p) => `• ${p}`).join("\n")}\n\nSes Tonu: ${result.analysis.tone}\nKelime Sayısı: ${result.analysis.wordCount}\nDil: ${result.analysis.language}`;
+    const content = `TRANSKRİPSİYON\n${"=".repeat(40)}\n\n${result.transcription}\n\nANALİZ\n${"=".repeat(40)}\n\nÖzet: ${result.analysis.summary}\n\nAnahtar Noktalar:\n${result.analysis.keyPoints.map((p) => `• ${p}`).join("\n")}\n\nSes Tonu: ${result.analysis.toneLabel}\nKelime Sayısı: ${result.analysis.wordCount}\nCümle Sayısı: ${result.analysis.sentenceCount}\nDil: ${result.analysis.languageLabel}`;
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -221,7 +302,7 @@ export default function VoiceTool() {
     <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50/30 to-white py-12 px-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-12 text-center">
+        <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Mic className="w-8 h-8 text-emerald-600" />
             <h1 className="text-4xl font-bold text-gray-900">Ses Aracı</h1>
@@ -229,6 +310,32 @@ export default function VoiceTool() {
           <p className="text-gray-600 text-lg">
             Mikrofonla konuşun veya metin yükleyin — transkripsiyon ve analiz alın
           </p>
+        </div>
+
+        {/* Language selector */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <button
+            onClick={() => setRecognitionLang("tr-TR")}
+            disabled={isRecording}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+              recognitionLang === "tr-TR"
+                ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                : "border-border bg-white text-muted-foreground hover:border-emerald-300"
+            }`}
+          >
+            Türkçe
+          </button>
+          <button
+            onClick={() => setRecognitionLang("en-US")}
+            disabled={isRecording}
+            className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+              recognitionLang === "en-US"
+                ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                : "border-border bg-white text-muted-foreground hover:border-emerald-300"
+            }`}
+          >
+            English
+          </button>
         </div>
 
         {/* Recording Section */}
@@ -404,23 +511,29 @@ export default function VoiceTool() {
                       ))}
                     </ul>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
                       <p className="text-sm text-gray-600">Ses Tonu</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {result.analysis.tone}
+                      <p className="text-base font-semibold text-gray-900">
+                        {result.analysis.toneLabel}
                       </p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
-                      <p className="text-sm text-gray-600">Kelime Sayısı</p>
+                      <p className="text-sm text-gray-600">Kelime</p>
                       <p className="text-lg font-semibold text-gray-900">
                         {result.analysis.wordCount}
                       </p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg text-center">
+                      <p className="text-sm text-gray-600">Cümle</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {result.analysis.sentenceCount}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg text-center">
                       <p className="text-sm text-gray-600">Dil</p>
                       <p className="text-lg font-semibold text-gray-900">
-                        {result.analysis.language}
+                        {result.analysis.languageLabel}
                       </p>
                     </div>
                   </div>
@@ -439,8 +552,9 @@ export default function VoiceTool() {
                 <div>
                   <p className="text-sm font-medium text-amber-800 mb-1">Tarayıcı Uyumluluğu</p>
                   <p className="text-xs text-amber-700/80">
-                    Ses tanıma özelliği Chrome ve Edge tarayıcılarında çalışır. Alternatif olarak
-                    metin dosyası yükleyip analiz edebilirsiniz.
+                    Ses tanıma özelliği Chrome ve Edge tarayıcılarında çalışır. Türkçe veya
+                    İngilizce seçip konuşabilirsiniz. Alternatif olarak metin dosyası yükleyip
+                    analiz edebilirsiniz — analiz dili otomatik algılanır (Türkçe/İngilizce).
                   </p>
                 </div>
               </div>

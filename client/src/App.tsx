@@ -6,7 +6,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
-import PresentationTool from "./pages/PresentationTool";
 import LogoGenerator from "./pages/LogoGenerator";
 import VoiceTool from "./pages/VoiceTool";
 import Converter from "./pages/Converter";
@@ -21,7 +20,6 @@ function Router() {
       <Navbar />
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/presentation" component={PresentationTool} />
         <Route path="/logo" component={LogoGenerator} />
         <Route path="/voice" component={VoiceTool} />
         <Route path="/converter" component={Converter} />

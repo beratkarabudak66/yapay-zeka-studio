@@ -25,347 +25,333 @@ const languages: { id: Language; label: string; icon: string }[] = [
   { id: "bash", label: "Bash", icon: "$" },
 ];
 
-type SnippetType = {
-  id: string;
-  label: string;
-  desc: string;
-  languages: Language[];
-};
-
-const snippetTypes: SnippetType[] = [
-  { id: "function", label: "Fonksiyon", desc: "Yeniden kullanılabilir fonksiyon şablonu", languages: ["javascript", "python"] },
-  { id: "loop", label: "Döngü", desc: "For/while döngüsü örneği", languages: ["javascript", "python", "bash"] },
-  { id: "array", label: "Dizi İşlemi", desc: "Map, filter, reduce örnekleri", languages: ["javascript", "python"] },
-  { id: "fetch", label: "API İsteği", desc: "HTTP GET/POST isteği", languages: ["javascript", "python"] },
-  { id: "form", label: "Form", desc: "HTML form yapısı", languages: ["html", "css"] },
-  { id: "layout", label: "Flex Layout", desc: "CSS Flexbox düzeni", languages: ["css"] },
-  { id: "select", label: "SELECT Sorgusu", desc: "Veritabanı sorgu örnekleri", languages: ["sql"] },
-  { id: "script", label: "Shell Script", desc: "Bash betik örneği", languages: ["bash"] },
-];
-
-function generateCode(lang: Language, typeId: string, topic: string): { code: string; explanation: string } {
-  const t = topic.trim() || "örnek";
-  switch (typeId) {
-    case "function":
-      if (lang === "javascript") {
-        return {
-          code: `// ${t} için fonksiyon
-function process${capitalize(t)}(input) {
-  if (!input) {
-    throw new Error("Girdi boş olamaz");
-  }
-  const result = input;
-  return result;
-}
-
-// Kullanım:
-const output = process${capitalize(t)}("test verisi");
-console.log(output);`,
-          explanation: `${t} işlemek için bir JavaScript fonksiyonu. Hata kontrolü içerir ve bir değer döndürür.`,
-        };
-      }
-      return {
-        code: `# ${t} için fonksiyon
-def process_${snakeCase(t)}(input):
-    if not input:
-        raise ValueError("Girdi boş olamaz")
-    result = input
-    return result
-
-# Kullanım:
-output = process_${snakeCase(t)}("test verisi")
-print(output)`,
-        explanation: `${t} işlemek için bir Python fonksiyonu. Hata kontrolü içerir ve bir değer döndürür.`,
-      };
-
-    case "loop":
-      if (lang === "javascript") {
-        return {
-          code: `// ${t} için döngü örneği
-const items = ["a", "b", "c", "d"];
-
-// For döngüsü
-for (let i = 0; i < items.length; i++) {
-  console.log(\`Öğe \${i}: \${items[i]}\`);
-}
-
-// For...of döngüsü
-for (const item of items) {
-  console.log(item);
-}
-
-// While döngüsü
-let count = 0;
-while (count < items.length) {
-  console.log(\`Sayım: \${count}\`);
-  count++;
-}`,
-          explanation: `${t} için üç farklı döngü türü: klasik for, for...of ve while.`,
-        };
-      }
-      if (lang === "python") {
-        return {
-          code: `# ${t} için döngü örneği
-items = ["a", "b", "c", "d"]
-
-# For döngüsü
-for i, item in enumerate(items):
-    print(f"Öğe {i}: {item}")
-
-# While döngüsü
-count = 0
-while count < len(items):
-    print(f"Sayım: {count}")
-    count += 1`,
-          explanation: `${t} için Python döngü örnekleri: enumerate ile for ve while.`,
-        };
-      }
-      return {
-        code: `#!/bin/bash
-# ${t} için bash döngü
-items=("a" "b" "c" "d")
-
-for item in "\${items[@]}"; do
-    echo "Öğe: $item"
-done
-
-count=0
-while [ $count -lt \${#items[@]} ]; do
-    echo "Sayım: $count"
-    ((count++))
-done`,
-        explanation: `${t} için bash döngü örnekleri: for ve while.`,
-      };
-
-    case "array":
-      if (lang === "javascript") {
-        return {
-          code: `// ${t} için dizi işlemleri
-const data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
-// map: her elemanı dönüştür
-const doubled = data.map(n => n * 2);
-
-// filter: koşula uyanları seç
-const evens = data.filter(n => n % 2 === 0);
-
-// reduce: tek bir değere indir
-const sum = data.reduce((acc, n) => acc + n, 0);
-
-// find: ilk eşleşen eleman
-const firstBig = data.find(n => n > 5);
-
-console.log({ doubled, evens, sum, firstBig });`,
-          explanation: `${t} için JavaScript dizi metotları: map, filter, reduce ve find.`,
-        };
-      }
-      return {
-        code: `# ${t} için liste işlemleri
-data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
-# map: her elemanı dönüştür
-doubled = list(map(lambda n: n * 2, data))
-
-# filter: koşula uyanları seç
-evens = list(filter(lambda n: n % 2 == 0, data))
-
-# reduce: tek bir değere indir
-from functools import reduce
-total = reduce(lambda acc, n: acc + n, data, 0)
-
-print({"doubled": doubled, "evens": evens, "sum": total})`,
-        explanation: `${t} için Python liste işlemleri: map, filter ve reduce.`,
-      };
-
-    case "fetch":
-      if (lang === "javascript") {
-        return {
-          code: `// ${t} için API isteği
-async function fetchData(url) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(\`HTTP hatası: \${response.status}\`);
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("İstek başarısız:", error);
-    throw error;
-  }
-}
-
-// POST isteği
-async function postData(url, body) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return response.json();
-}
-
-// Kullanım:
-fetchData("https://api.example.com/${snakeCase(t)}")
-  .then(data => console.log(data));`,
-          explanation: `${t} için async/await ile GET ve POST istekleri. Hata yönetimi içerir.`,
-        };
-      }
-      return {
-        code: `# ${t} için API isteği
-import urllib.request
-import json
-
-def fetch_data(url):
-    try:
-        with urllib.request.urlopen(url) as response:
-            data = json.loads(response.read().decode())
-            return data
-    except Exception as e:
-        print(f"İstek başarısız: {e}")
-        raise
-
-# requests kütüphanesi ile (pip install requests)
-import requests
-
-def post_data(url, body):
-    response = requests.post(url, json=body)
-    response.raise_for_status()
-    return response.json()
-
-# Kullanım:
-data = fetch_data("https://api.example.com/${snakeCase(t)}")
-print(data)`,
-        explanation: `${t} için Python HTTP istekleri. urllib ve requests kütüphanesi örnekleri.`,
-      };
-
-    case "form":
-      return {
-        code: `<!-- ${t} için form -->
-<form id="${snakeCase(t)}-form" class="form-container">
-  <h2>${capitalize(t)}</h2>
-
-  <div class="form-group">
-    <label for="name">Ad:</label>
-    <input type="text" id="name" name="name" required placeholder="Adınızı girin" />
-  </div>
-
-  <div class="form-group">
-    <label for="email">E-posta:</label>
-    <input type="email" id="email" name="email" required placeholder="email@ornek.com" />
-  </div>
-
-  <div class="form-group">
-    <label for="message">Mesaj:</label>
-    <textarea id="message" name="message" rows="4" placeholder="Mesajınız"></textarea>
-  </div>
-
-  <button type="submit">Gönder</button>
-</form>`,
-        explanation: `${t} için erişilebilir bir HTML form yapısı. Etiketler, doğrulama ve placeholder içerir.`,
-      };
-
-    case "layout":
-      return {
-        code: `/* ${t} için Flexbox düzeni */
-.container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.card {
-  flex: 1 1 300px;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* Responsive: mobilde tek sütun */
-@media (max-width: 640px) {
-  .row {
-    flex-direction: column;
-  }
-}`,
-        explanation: `${t} için CSS Flexbox düzeni. Responsive ve kart yapısı içerir.`,
-      };
-
-    case "select":
-      return {
-        code: `-- ${t} için SQL sorguları
-
--- Tüm kayıtları getir
-SELECT * FROM ${snakeCase(t)};
-
--- Belirli sütunları seç ve filtrele
-SELECT id, name, created_at
-FROM ${snakeCase(t)}
-WHERE status = 'active'
-ORDER BY created_at DESC
-LIMIT 10;
-
--- Gruplama ve sayım
-SELECT status, COUNT(*) as count
-FROM ${snakeCase(t)}
-GROUP BY status;
-
--- İki tabloyu birleştir (JOIN)
-SELECT t.id, t.name, c.category_name
-FROM ${snakeCase(t)} t
-LEFT JOIN categories c ON t.category_id = c.id
-WHERE t.status = 'active';`,
-        explanation: `${t} için SQL örnekleri: SELECT, WHERE, ORDER BY, GROUP BY ve JOIN.`,
-      };
-
-    case "script":
-      return {
-        code: `#!/bin/bash
-# ${t} için shell script
-
-set -e  # Hata durumunda dur
-
-# Değişkenler
-INPUT_DIR="./input"
-OUTPUT_DIR="./output"
-DATE=$(date +%Y%m%d)
-
-# Klasör oluştur
-mkdir -p "$OUTPUT_DIR"
-
-# Dosyaları işle
-for file in "$INPUT_DIR"/*; do
-  if [ -f "$file" ]; then
-    filename=$(basename "$file")
-    echo "İşleniyor: $filename"
-    cp "$file" "$OUTPUT_DIR/\${DATE}_$filename"
-  fi
-done
-
-echo "Tamamlandı: $(ls "$OUTPUT_DIR" | wc -l) dosya işlendi"`,
-        explanation: `${t} için bash script. Dosya işleme, değişkenler ve hata yönetimi içerir.`,
-      };
-
-    default:
-      return { code: "// Kod şablonu seçilmedi", explanation: "Bir şablon türü seçin." };
-  }
-}
-
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1).replace(/\s+/g, "");
 }
 
 function snakeCase(s: string): string {
   return s.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+}
+
+/**
+ * Interprets a free-text topic and produces a concrete code snippet in the
+ * selected language. Matches common beginner requests ("hello world", "button",
+ * "form", "counter", "list", etc.) and falls back to a generic template that
+ * still reflects the topic the user typed.
+ */
+function generateCode(lang: Language, topic: string): { code: string; explanation: string } {
+  const t = topic.trim();
+  const lower = t.toLowerCase();
+
+  // --- Hello World ---
+  if (/(hello\s*world|merhaba\s*dünya)/.test(lower)) {
+    if (lang === "javascript")
+      return { code: `console.log("Hello, World!");`, explanation: "Ekrana 'Hello, World!' yazdırır." };
+    if (lang === "python")
+      return { code: `print("Hello, World!")`, explanation: "Ekrana 'Hello, World!' yazdırır." };
+    if (lang === "html")
+      return { code: `<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hello, World!</h1>\n  </body>\n</html>`, explanation: "Hello, World! başlığını gösteren HTML sayfası." };
+    if (lang === "css")
+      return { code: `body {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  min-height: 100vh;\n  font-size: 2rem;\n}`, explanation: "İçeriği ekranın ortasına hizalar (Hello, World için)." };
+    if (lang === "sql")
+      return { code: `SELECT 'Hello, World!' AS greeting;`, explanation: "'Hello, World!' metnini bir sorgu sonucu olarak döndürür." };
+    return { code: `#!/bin/bash\necho "Hello, World!"`, explanation: "Terminale 'Hello, World!' yazdırır." };
+  }
+
+  // --- Counter / Sayaç ---
+  if (/(counter|sayaç|sayac)/.test(lower)) {
+    if (lang === "javascript")
+      return {
+        code: `let count = 0;
+
+function increment() {
+  count++;
+  console.log("Sayı:", count);
+}
+
+function decrement() {
+  count--;
+  console.log("Sayı:", count);
+}
+
+increment(); // 1
+increment(); // 2
+decrement(); // 1`,
+        explanation: "Artır/azalt fonksiyonlarıyla basit bir sayaç.",
+      };
+    if (lang === "python")
+      return {
+        code: `count = 0
+
+def increment():
+    global count
+    count += 1
+    print("Sayı:", count)
+
+def decrement():
+    global count
+    count -= 1
+    print("Sayı:", count)
+
+increment()  # 1
+increment()  # 2
+decrement()  # 1`,
+        explanation: "Artır/azalt fonksiyonlarıyla basit bir sayaç.",
+      };
+    if (lang === "html")
+      return {
+        code: `<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Sayaç: <span id="count">0</span></h1>
+    <button onclick="increment()">+ Artır</button>
+    <button onclick="decrement()">- Azalt</button>
+    <script>
+      let count = 0;
+      function update() { document.getElementById("count").textContent = count; }
+      function increment() { count++; update(); }
+      function decrement() { count--; update(); }
+    </script>
+  </body>
+</html>`,
+        explanation: "Çalışan bir HTML sayaç — butonlara basınca sayı değişir.",
+      };
+    return { code: `#!/bin/bash\ncount=0\n((count++))\necho "Sayı: $count"`, explanation: "Bash'te basit sayaç." };
+  }
+
+  // --- Button / Buton ---
+  if (/(button|buton)/.test(lower)) {
+    if (lang === "html")
+      return {
+        code: `<button id="myBtn" onclick="alert('Tıklandı!')">Tıkla</button>`,
+        explanation: "Tıklanınca uyarı gösteren bir buton.",
+      };
+    if (lang === "css")
+      return {
+        code: `button {\n  padding: 12px 24px;\n  font-size: 16px;\n  border: none;\n  border-radius: 8px;\n  background: #2563eb;\n  color: white;\n  cursor: pointer;\n}\nbutton:hover {\n  background: #1e40af;\n}`,
+        explanation: "Mavi, hover efektli bir buton stili.",
+      };
+    if (lang === "javascript")
+      return {
+        code: `document.getElementById("myBtn").addEventListener("click", () => {\n  console.log("Butona tıklandı");\n});`,
+        explanation: "Bir butona tıklama olayı ekler.",
+      };
+    return {
+      code: `# ${t} için Python örneği\nclass Button:\n    def __init__(self, label):\n        self.label = label\n    def click(self):\n        print(f"{self.label} tıklandı")\n\nbtn = Button("Gönder")\nbtn.click()`,
+      explanation: "Basit bir Button sınıfı örneği.",
+    };
+  }
+
+  // --- Form ---
+  if (/(form|iletişim|contact|kayıt|register|login|giriş)/.test(lower)) {
+    if (lang === "html")
+      return {
+        code: `<!DOCTYPE html>
+<html>
+  <body>
+    <form id="myForm">
+      <label>Ad: <input type="text" name="name" required></label><br>
+      <label>E-posta: <input type="email" name="email" required></label><br>
+      <textarea name="message" placeholder="Mesaj"></textarea><br>
+      <button type="submit">Gönder</button>
+    </form>
+    <script>
+      document.getElementById("myForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        alert("Form gönderildi!");
+      });
+    </script>
+  </body>
+</html>`,
+        explanation: "Ad, e-posta ve mesaj alanlı çalışan bir form.",
+      };
+    if (lang === "css")
+      return {
+        code: `form {\n  max-width: 400px;\n  margin: 20px auto;\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n}\ninput, textarea {\n  padding: 10px;\n  border: 1px solid #ccc;\n  border-radius: 6px;\n}\nbutton {\n  padding: 12px;\n  background: #2563eb;\n  color: white;\n  border: none;\n  border-radius: 6px;\n  cursor: pointer;\n}`,
+        explanation: "Form alanları için temiz, düzenli bir stil.",
+      };
+    return { code: `-- Kullanıcı kayıtlarını tutan tablo\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(100) NOT NULL,\n  email VARCHAR(255) UNIQUE NOT NULL,\n  created_at TIMESTAMP DEFAULT NOW()\n);`, explanation: "Form verilerini kaydetmek için users tablosu." };
+  }
+
+  // --- List / Liste / Array ---
+  if (/(list|liste|array|dizi|to.do|yapılacak)/.test(lower)) {
+    if (lang === "javascript")
+      return {
+        code: `const todos = ["Ödev yap", "E-posta gönder", "Koşuya çık"];
+
+todos.forEach((item, i) => {
+  console.log(\`\${i + 1}. \${item}\`);
+});
+
+// Yeni öğe ekle
+todos.push("Kitap oku");
+console.log("Güncel liste:", todos);`,
+        explanation: "Bir yapılacaklar listesi — ekrana yazdırma ve öğe ekleme.",
+      };
+    if (lang === "python")
+      return {
+        code: `todos = ["Ödev yap", "E-posta gönder", "Koşuya çık"]
+
+for i, item in enumerate(todos, 1):
+    print(f"{i}. {item}")
+
+# Yeni öğe ekle
+todos.append("Kitap oku")
+print("Güncel liste:", todos)`,
+        explanation: "Bir yapılacaklar listesi — ekrana yazdırma ve öğe ekleme.",
+      };
+    return {
+      code: `const list = document.getElementById("list");\nconst items = ["Elma", "Armut", "Muz"];\nitems.forEach(item => {\n  const li = document.createElement("li");\n  li.textContent = item;\n  list.appendChild(li);\n});`,
+      explanation: "JS ile bir listeye öğe ekleme.",
+    };
+  }
+
+  // --- Calculator / Hesap makinesi ---
+  if (/(calculator|hesap\s*makine)/.test(lower)) {
+    if (lang === "python")
+      return {
+        code: `def calculator(a, b, op):\n    if op == "+": return a + b\n    if op == "-": return a - b\n    if op == "*": return a * b\n    if op == "/": return a / b if b != 0 else "Sıfıra bölme"\n    return "Geçersiz işlem"\n\nprint(calculator(10, 5, "+"))  # 15\nprint(calculator(10, 5, "*"))  # 50`,
+        explanation: "Toplama, çıkarma, çarpma, bölme yapan bir hesap makinesi.",
+      };
+    if (lang === "javascript")
+      return {
+        code: `function calculator(a, b, op) {\n  switch (op) {\n    case "+": return a + b;\n    case "-": return a - b;\n    case "*": return a * b;\n    case "/": return b !== 0 ? a / b : "Sıfıra bölme";\n    default: return "Geçersiz işlem";\n  }\n}\n\nconsole.log(calculator(10, 5, "+")); // 15\nconsole.log(calculator(10, 5, "*")); // 50`,
+        explanation: "Dört işlem yapan bir hesap makinesi fonksiyonu.",
+      };
+    if (lang === "html")
+      return {
+        code: `<!DOCTYPE html>\n<html>\n  <body>\n    <input id="a" type="number" value="10">\n    <select id="op"><option>+</option><option>-</option><option>*</option><option>/</option></select>\n    <input id="b" type="number" value="5">\n    <button onclick="calc()">Hesapla</button>\n    <p id="result"></p>\n    <script>\n      function calc() {\n        const a = +document.getElementById("a").value;\n        const b = +document.getElementById("b").value;\n        const op = document.getElementById("op").value;\n        const r = eval(a + op + b);\n        document.getElementById("result").textContent = r;\n      }\n    </script>\n  </body>\n</html>`,
+        explanation: "Çalışan bir HTML hesap makinesi.",
+      };
+    return { code: `-- Hesap geçmişi tablosu\nCREATE TABLE calc_history (\n  id SERIAL PRIMARY KEY,\n  expression TEXT,\n  result NUMERIC,\n  created_at TIMESTAMP DEFAULT NOW()\n);`, explanation: "Hesap işlemlerini saklayan tablo." };
+  }
+
+  // --- Timer / Zamanlayıcı ---
+  if (/(timer|zamanlayıcı|kronometre|stopwatch)/.test(lower)) {
+    if (lang === "javascript")
+      return {
+        code: `let seconds = 0;\nconst timer = setInterval(() => {\n  seconds++;\n  console.log(\`Geçen süre: \${seconds}sn\`);\n  if (seconds >= 10) clearInterval(timer);\n}, 1000);`,
+        explanation: "Saniyede bir artan, 10 saniye sonra duran bir zamanlayıcı.",
+      };
+    if (lang === "python")
+      return {
+        code: `import time\n\nseconds = 0\nwhile seconds < 10:\n    seconds += 1\n    print(f"Geçen süre: {seconds}sn")\n    time.sleep(1)`,
+        explanation: "Saniyede bir artan, 10 saniye sonra duran bir zamanlayıcı.",
+      };
+    if (lang === "html")
+      return {
+        code: `<!DOCTYPE html>\n<html>\n  <body>\n    <h1 id="timer">0sn</h1>\n    <button onclick="start()">Başlat</button>\n    <script>\n      let s = 0, id;\n      function start() {\n        id = setInterval(() => {\n          s++;\n          document.getElementById("timer").textContent = s + "sn";\n          if (s >= 10) clearInterval(id);\n        }, 1000);\n      }\n    </script>\n  </body>\n</html>`,
+        explanation: "Çalışan bir HTML zamanlayıcı.",
+      };
+    return { code: `#!/bin/bash\ns=0\nwhile [ $s -lt 10 ]; do\n  ((s++))\n  echo "Geçen süre: \${s}sn"\n  sleep 1\ndone`, explanation: "Bash zamanlayıcı." };
+  }
+
+  // --- Fetch / API ---
+  if (/(fetch|api|http|request|istek)/.test(lower)) {
+    if (lang === "javascript")
+      return {
+        code: `async function fetchData(url) {\n  try {\n    const res = await fetch(url);\n    if (!res.ok) throw new Error(\`HTTP \${res.status}\`);\n    return await res.json();\n  } catch (e) {\n    console.error("İstek başarısız:", e);\n  }\n}\n\nfetchData("https://api.example.com/${snakeCase(t)}").then(console.log);`,
+        explanation: "async/await ile GET isteği, hata yönetimi içerir.",
+      };
+    if (lang === "python")
+      return {
+        code: `import urllib.request, json\n\ndef fetch_data(url):\n    with urllib.request.urlopen(url) as r:\n        return json.loads(r.read().decode())\n\ndata = fetch_data("https://api.example.com/${snakeCase(t)}")\nprint(data)`,
+        explanation: "urllib ile GET isteği.",
+      };
+    return { code: `-- API log tablosu\nCREATE TABLE api_logs (\n  id SERIAL PRIMARY KEY,\n  endpoint TEXT,\n  status INT,\n  created_at TIMESTAMP DEFAULT NOW()\n);`, explanation: "API isteklerini loglayan tablo." };
+  }
+
+  // --- Loop / Döngü ---
+  if (/(loop|döngü|for|while|yinele)/.test(lower)) {
+    if (lang === "javascript")
+      return {
+        code: `for (let i = 1; i <= 5; i++) {\n  console.log(\`Sayı: \${i}\`);\n}`,
+        explanation: "1'den 5'e kadar yazdıran for döngüsü.",
+      };
+    if (lang === "python")
+      return {
+        code: `for i in range(1, 6):\n    print(f"Sayı: {i}")`,
+        explanation: "1'den 5'e kadar yazdıran for döngüsü.",
+      };
+    return { code: `#!/bin/bash\nfor i in 1 2 3 4 5; do\n  echo "Sayı: $i"\ndone`, explanation: "Bash for döngüsü." };
+  }
+
+  // --- Generic fallback: build a working snippet from the topic ---
+  if (lang === "javascript") {
+    return {
+      code: `// ${t} için JavaScript örneği
+function ${snakeCase(t) || "run"}() {
+  console.log("${t} çalıştı");
+  return "${t}";
+}
+
+${snakeCase(t) || "run"}();`,
+      explanation: `"${t}" konusu için temel bir JavaScript fonksiyonu. Çalıştığında konsola mesaj yazar.`,
+    };
+  }
+  if (lang === "python") {
+    return {
+      code: `# ${t} için Python örneği
+def ${snakeCase(t) || "run"}():
+    print("${t} çalıştı")
+    return "${t}"
+
+${snakeCase(t) || "run"}()`,
+      explanation: `"${t}" konusu için temel bir Python fonksiyonu. Çalıştığında ekrana mesaz yazar.`,
+    };
+  }
+  if (lang === "html") {
+    return {
+      code: `<!DOCTYPE html>
+<html>
+  <head><title>${capitalize(t)}</title></head>
+  <body>
+    <h1>${capitalize(t)}</h1>
+    <p>${t} hakkında bir sayfa.</p>
+  </body>
+</html>`,
+      explanation: `"${t}" konulu basit bir HTML sayfası.`,
+    };
+  }
+  if (lang === "css") {
+    return {
+      code: `/* ${t} için CSS */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: sans-serif;
+}
+
+.${snakeCase(t) || "box"} {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+}`,
+      explanation: `"${t}" için temel bir CSS düzeni.`,
+    };
+  }
+  if (lang === "sql") {
+    return {
+      code: `-- ${t} için SQL
+CREATE TABLE ${snakeCase(t) || "items"} (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+SELECT * FROM ${snakeCase(t) || "items"};`,
+      explanation: `"${t}" için bir tablo oluşturup veri çeken SQL.`,
+    };
+  }
+  // bash
+  return {
+    code: `#!/bin/bash
+# ${t} için bash script
+echo "${t} başlıyor..."
+echo "Tamamlandı."`,
+    explanation: `"${t}" için temel bir bash betiği.`,
+  };
 }
 
 type CodingResult = {
@@ -378,25 +364,17 @@ type CodingResult = {
 export default function CodingAssistant() {
   const [topic, setTopic] = useState("");
   const [selectedLang, setSelectedLang] = useState<Language>("javascript");
-  const [selectedType, setSelectedType] = useState("function");
   const [result, setResult] = useState<CodingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Filter snippet types by selected language
-  const availableTypes = snippetTypes.filter((t) => t.languages.includes(selectedLang));
 
   const handleGenerate = () => {
     if (!topic.trim()) {
       toast.error("Lütfen bir konu girin.");
       return;
     }
-    // Ensure selected type is valid for the language
-    if (!availableTypes.some((t) => t.id === selectedType)) {
-      setSelectedType(availableTypes[0]?.id || "function");
-    }
     setIsProcessing(true);
     setTimeout(() => {
-      const { code, explanation } = generateCode(selectedLang, selectedType, topic);
+      const { code, explanation } = generateCode(selectedLang, topic);
       const codingResult: CodingResult = { code, explanation, language: selectedLang, topic: topic.trim() };
       setResult(codingResult);
       addHistoryItem({
@@ -408,7 +386,7 @@ export default function CodingAssistant() {
         }),
       });
       setIsProcessing(false);
-      toast.success("Kod şablonu oluşturuldu!");
+      toast.success("Kod oluşturuldu!");
     }, 400);
   };
 
@@ -449,7 +427,7 @@ export default function CodingAssistant() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Kodlama Asistanı</h1>
             <p className="text-muted-foreground text-sm">
-              Konu ve dil seç — hazır kod şablonu anında oluşsun
+              Ne yapmak istediğini yaz, dil seç — hazır kod anında oluşsun
             </p>
           </div>
         </div>
@@ -469,14 +447,7 @@ export default function CodingAssistant() {
                     {languages.map((lang) => (
                       <button
                         key={lang.id}
-                        onClick={() => {
-                          setSelectedLang(lang.id);
-                          // Reset type to first available for this language
-                          const validTypes = snippetTypes.filter((t) => t.languages.includes(lang.id));
-                          if (validTypes.length > 0 && !validTypes.some((t) => t.id === selectedType)) {
-                            setSelectedType(validTypes[0].id);
-                          }
-                        }}
+                        onClick={() => setSelectedLang(lang.id)}
                         className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all ${
                           selectedLang === lang.id
                             ? "border-primary bg-primary/5"
@@ -492,43 +463,25 @@ export default function CodingAssistant() {
                   </div>
                 </div>
 
-                {/* Snippet Type */}
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Şablon Türü</label>
-                  <div className="space-y-1.5">
-                    {availableTypes.map((type) => (
-                      <button
-                        key={type.id}
-                        onClick={() => setSelectedType(type.id)}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-lg border-2 transition-all text-left ${
-                          selectedType === type.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/40"
-                        }`}
-                      >
-                        <div>
-                          <span className="font-semibold text-sm text-foreground">{type.label}</span>
-                          <span className="text-xs text-muted-foreground block">{type.desc}</span>
-                        </div>
-                        <Terminal className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Topic */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1.5 block">
-                    Konu / Açıklama
+                    Ne yapmak istiyorsun?
                   </label>
                   <input
                     type="text"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    placeholder="örn: kullanıcı listesi, veri filtreleme"
+                    placeholder="örn: hello world, sayaç, hesap makinesi, form"
                     className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    maxLength={50}
+                    maxLength={60}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !isProcessing && topic.trim()) handleGenerate();
+                    }}
                   />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    İpucu: "hello world", "sayaç", "hesap makinesi", "form", "timer", "liste" gibi yazabilirsin.
+                  </p>
                 </div>
 
                 <Button
@@ -621,7 +574,7 @@ export default function CodingAssistant() {
                   </div>
                   <h3 className="font-semibold text-foreground mb-2">Kod Hazır Değil</h3>
                   <p className="text-muted-foreground text-sm max-w-xs">
-                    Dil seç, şablon türü belirle ve konu gir, ardından "Kod Oluştur" butonuna tıkla.
+                    Ne yapmak istediğini yaz (örn: "hello world"), dil seç ve "Kod Oluştur"a tıkla.
                   </p>
                 </CardContent>
               </Card>

@@ -2,7 +2,6 @@ import { useHasHistory } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import {
-  Presentation,
   Image,
   Mic,
   FileType,
@@ -17,7 +16,6 @@ import {
 import { useState } from "react";
 
 const tools = [
-  { label: "Sunum", href: "/presentation", icon: Presentation, color: "text-blue-600" },
   { label: "Logo", href: "/logo", icon: Image, color: "text-purple-600" },
   { label: "Ses", href: "/voice", icon: Mic, color: "text-emerald-600" },
   { label: "Dönüştür", href: "/converter", icon: FileType, color: "text-orange-600" },

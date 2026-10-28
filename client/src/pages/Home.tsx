@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Presentation,
   Image,
   Mic,
   FileType,
@@ -21,19 +20,6 @@ import {
 import ContactForm from "@/components/ContactForm";
 
 const tools = [
-  {
-    id: "presentation",
-    href: "/presentation",
-    icon: Presentation,
-    label: "Sunum Aracı",
-    description:
-      "PDF veya metin yükle, AI ile yapı ve tasarımını iyileştir. Başlık, biçimlendirme ve görsel düzen önerileri al.",
-    badge: "PDF & Slayt",
-    color: "from-blue-500 to-blue-700",
-    bg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    borderColor: "hover:border-blue-300",
-  },
   {
     id: "logo",
     href: "/logo",
@@ -258,7 +244,7 @@ export default function Home() {
           </h1>
 
           <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-12 leading-relaxed">
-            Sunum hazırla, logo üret, ses ve video düzenle, kod yaz — hepsi tek platformda,
+            Logo üret, ses ve video düzenle, kod yaz — hepsi tek platformda,
             tek tıkla. Öğrenciler için tasarlanmış güçlü AI araçları.
           </p>
 
@@ -283,7 +269,7 @@ export default function Home() {
           {/* Stats */}
           <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-foreground text-base">6</span> AI Araç
+              <span className="font-bold text-foreground text-base">5</span> AI Araç
             </div>
             <div className="w-px h-4 bg-border" />
             <div className="flex items-center gap-1.5">
